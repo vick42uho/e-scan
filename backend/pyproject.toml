@@ -1,0 +1,20 @@
+[project]
+name = "yanhee-dms-backend"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi[standard]>=0.142.2",
+    "opencv-python-headless>=5.0.0.93",
+    "pillow[standard]>=12.3.0",
+    "psycopg2-binary[standard]>=2.9.13",
+    "psycopg[binary]>=3.3.6",
+    "pydantic-settings[standard]>=2.15.0",
+    "pymupdf>=1.28.2",
+    "pypdf>=6.19.0",
+    "python-multipart[standard]>=0.0.32",
+    "qrcode>=8.2",
+    "sqlalchemy[standard]>=2.1.1",
+    "zxing-cpp>=3.1.1",
+]

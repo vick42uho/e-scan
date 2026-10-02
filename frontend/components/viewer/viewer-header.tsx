@@ -1,0 +1,130 @@
+"use client";
+
+import React from "react";
+import { DocumentItem } from "@/types/document";
+import { StatusPill } from "@/components/common/status-pill";
+import { Stethoscope, Calendar, UserCheck, FileText, ExternalLink } from "lucide-react";
+import { documentApi } from "@/services/document-api";
+
+interface ViewerHeaderProps {
+  document: DocumentItem | null;
+  currentPage?: number;
+}
+
+export function ViewerHeader({ document }: ViewerHeaderProps) {
+  if (!document) return null;
+
+  const isPdf = document.pages.some(
+    (p) => p.mime_type === "application/pdf" || p.file_name.toLowerCase().endsWith(".pdf")
+  );
+
+  const formattedDate = document.scan_date
+    ? new Date(document.scan_date).toLocaleDateString("th-TH", {
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : "-";
+
+  const getRoleBadge = (role?: string) => {
+    switch (role) {
+      case "Doctor":
+        return <StatusPill label="แพทย์สแกน" variant="blue" size="sm" />;
+      case "Nurse":
+        return <StatusPill label="พยาบาลสแกน" variant="green" size="sm" />;
+      case "Staff":
+        return <StatusPill label="จนท.เวชระเบียน" variant="slate" size="sm" />;
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="h-10 px-2 sm:px-3 md:px-4 bg-slate-100/90 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-2 text-xs text-slate-600 dark:text-slate-300 overflow-hidden select-none">
+      {/* Title & Document Badge (min-w-0 flex-1 prevents text collision) */}
+      <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1 overflow-hidden">
+        {document.is_doctor_document ? (
+          <span className="bg-blue-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded flex items-center gap-1 shrink-0">
+            <Stethoscope className="h-3 w-3" />
+            <span className="hidden xs:inline">เอกสารแพทย์</span>
+            <span className="xs:hidden">แพทย์</span>
+          </span>
+        ) : (
+          <span className="bg-emerald-600 text-white text-[10px] font-medium px-1.5 py-0.5 rounded flex items-center gap-1 shrink-0">
+            <UserCheck className="h-3 w-3" />
+            <span className="hidden xs:inline">พยาบาล/ทั่วไป</span>
+            <span className="xs:hidden">ทั่วไป</span>
+          </span>
+        )}
+
+        <span
+          className="font-semibold text-slate-800 dark:text-slate-100 truncate min-w-0 text-xs sm:text-[13px]"
+          title={document.title}
+        >
+          {document.title}
+        </span>
+
+        {document.document_code && (
+          <span className="hidden sm:inline-block font-mono text-[10px] bg-slate-200 dark:bg-slate-800 px-1.5 py-0.5 rounded text-slate-600 dark:text-slate-400 shrink-0 border border-slate-300/40 dark:border-slate-700">
+            {document.document_code}
+          </span>
+        )}
+
+        {isPdf && (
+          <a
+            href={documentApi.getRawFileUrl(document.id)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1 text-[10px] font-semibold bg-rose-50 text-rose-700 dark:bg-rose-950/80 dark:text-rose-300 border border-rose-200 dark:border-rose-800 px-1.5 py-0.5 rounded hover:bg-rose-100 dark:hover:bg-rose-900 transition-colors shrink-0"
+            title="คลิกเพื่อเปิดดูไฟล์ PDF ต้นฉบับในแท็บใหม่"
+          >
+            <FileText className="h-3 w-3 text-rose-500" />
+            <span>PDF ต้นฉบับ</span>
+            <ExternalLink className="h-2.5 w-2.5 opacity-70" />
+          </a>
+        )}
+
+        {document.is_confidential && (
+          <StatusPill label="ความลับ" variant="red" size="sm" />
+        )}
+      </div>
+
+      {/* Doctor & Scanner Details (Right side, non-overlapping) */}
+      <div className="flex items-center gap-1.5 sm:gap-2.5 text-[11px] shrink-0">
+        {document.doctor_name && (
+          <div className="flex items-center gap-1 bg-blue-50 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300 px-1.5 sm:px-2 py-0.5 rounded border border-blue-200 dark:border-blue-900 shrink-0">
+            <Stethoscope className="h-3 w-3 text-blue-600 shrink-0" />
+            <span className="text-slate-500 hidden md:inline">แพทย์:</span>
+            <span className="font-semibold truncate max-w-[85px] xs:max-w-[120px] sm:max-w-[160px]">
+              {document.doctor_name}
+            </span>
+          </div>
+        )}
+
+        {document.scan_by_name && (
+          <div className="hidden lg:flex items-center gap-1 shrink-0">
+            <span className="text-slate-400">ผู้สแกน:</span>
+            <span className="font-medium text-slate-700 dark:text-slate-200 truncate max-w-[120px]">
+              {document.scan_by_name}
+            </span>
+            {getRoleBadge(document.scan_by_role)}
+          </div>
+        )}
+
+        {document.scan_date && (
+          <div className="hidden xl:flex items-center gap-1 text-slate-500 dark:text-slate-400 shrink-0">
+            <Calendar className="h-3 w-3 text-slate-400" />
+            <span className="font-mono text-[11px]">{formattedDate}</span>
+          </div>
+        )}
+
+        {/* Total pages info pill */}
+        <span className="hidden xs:inline-block text-[10px] font-mono text-slate-500 dark:text-slate-400 bg-slate-200/80 dark:bg-slate-800 px-1.5 py-0.5 rounded shrink-0">
+          รวม {document.total_pages} หน้า
+        </span>
+      </div>
+    </div>
+  );
+}
