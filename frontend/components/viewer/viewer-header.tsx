@@ -103,7 +103,8 @@ export function ViewerHeader({ document }: ViewerHeaderProps) {
           </div>
         )}
 
-        {document.scan_by_name && (
+        {/* Show scanner only if different from doctor to prevent duplicate names */}
+        {document.scan_by_name && document.scan_by_name !== document.doctor_name && (
           <div className="hidden lg:flex items-center gap-1 shrink-0">
             <span className="text-slate-400">ผู้สแกน:</span>
             <span className="font-medium text-slate-700 dark:text-slate-200 truncate max-w-[120px]">

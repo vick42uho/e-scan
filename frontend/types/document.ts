@@ -65,3 +65,4 @@ export interface DocumentTreeResponse {
 
 export type DocumentGroupBy = "visit_date" | "category" | "caregiver";
 export type DocumentCategoryType = "doctor" | "non_doctor" | "admin" | "all" | "care_team";
+export type EncounterFilterType = "all" | "opd" | "ipd";

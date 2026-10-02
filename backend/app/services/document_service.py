@@ -1,6 +1,6 @@
 from typing import Optional, List, Dict
 from sqlalchemy.orm import Session
-from sqlalchemy import or_
+from sqlalchemy import or_, and_
 from app.models.document import Document, DocumentCategory, DocumentPage
 from app.models.patient import Encounter
 from app.schemas.document import (
@@ -60,6 +60,7 @@ class DocumentService:
         hn: str,
         group_by: str = "visit_date",
         category_type: str = "all",
+        encounter_type: Optional[str] = None,
         query: Optional[str] = None,
         doctor_code: Optional[str] = None
     ) -> DocumentTreeResponse:
@@ -67,6 +68,7 @@ class DocumentService:
         สร้างโครงสร้าง Tree View ตาม HN
         - group_by: 'visit_date' | 'category' | 'caregiver'
         - category_type: 'doctor' | 'non_doctor' | 'care_team' | 'admin' | 'all'
+        - encounter_type: 'opd' | 'ipd' | 'all' (O+I)
         - query: ค้นหาชื่อเอกสาร หรือคีย์เวิร์ดในชาร์ตคนไข้นี้
         - doctor_code: กรองเฉพาะเอกสารของหมอท่านนี้ (เมื่อหมอ Login)
         """
@@ -78,7 +80,7 @@ class DocumentService:
         )
 
         # 1. Filter by Category Type / Doctor vs Non Doctor
-        cat_lower = category_type.lower()
+        cat_lower = (category_type or "all").lower()
         if cat_lower in ["doctor", "doc"]:
             db_query = db_query.filter(Document.is_doctor_document == True)
         elif cat_lower in ["non_doctor", "non-doctor", "nondoctor"]:
@@ -87,6 +89,23 @@ class DocumentService:
             db_query = db_query.filter(DocumentCategory.category_type == "Care Team")
         elif cat_lower in ["administration", "admin"]:
             db_query = db_query.filter(DocumentCategory.category_type == "Administration")
+
+        # 1.1 Filter by Encounter Type (OPD, IPD, O+I / all) - strictly for Visit Date grouping
+        if group_by == "visit_date" and encounter_type:
+            enc_lower = encounter_type.lower()
+            if enc_lower == "opd":
+                db_query = db_query.filter(Encounter.encounter_type == "OPD")
+            elif enc_lower == "ipd":
+                db_query = db_query.filter(Encounter.encounter_type == "IPD")
+
+        # 1.2 Care provider grouping: STRICTLY filter documents that have an attending physician/doctor!
+        if group_by == "caregiver":
+            db_query = db_query.filter(
+                and_(
+                    Document.doctor_name.isnot(None),
+                    Document.doctor_name != ""
+                )
+            )
 
         # 2. Filter by Doctor Code (My Documents)
         if doctor_code:
@@ -145,13 +164,15 @@ class DocumentService:
                 )
 
         # -------------------------------------------------------------
-        # Mode 2: Group by Caregiver (Doctor / Nurse / Staff) -> Subgroup by Visit Date!
+        # Mode 2: Group by Caregiver (Doctors only) -> Subgroup by Visit Date!
         # -------------------------------------------------------------
         elif group_by == "caregiver":
-            # Level 1: Caregiver Name
+            # Level 1: Caregiver Name (Strictly Attending Physicians / Doctors)
             care_groups: Dict[str, Dict[str, List[Document]]] = {}
             for doc in docs:
-                giver_name = doc.doctor_name or doc.scan_by_name or "ไม่ระบุผู้ตรวจ"
+                if not doc.doctor_name or not doc.doctor_name.strip():
+                    continue
+                giver_name = doc.doctor_name.strip()
                 date_key = doc.scan_date.strftime("%d-%m-%Y") if doc.scan_date else "ไม่ระบุวันที่"
                 care_groups.setdefault(giver_name, {}).setdefault(date_key, []).append(doc)
 

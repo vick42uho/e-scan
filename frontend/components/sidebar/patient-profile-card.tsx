@@ -1,15 +1,36 @@
 "use client";
 
 import React from "react";
-import { User, AlertTriangle, ShieldCheck } from "lucide-react";
+import { User } from "lucide-react";
 import { Patient } from "@/types/patient";
 
 interface PatientProfileCardProps {
   patient: Patient | null;
+  vn?: string | null;
 }
 
-export function PatientProfileCard({ patient }: PatientProfileCardProps) {
+function formatThaiDob(dobString?: string | null) {
+  if (!dobString) return "-";
+  try {
+    const d = new Date(dobString);
+    if (isNaN(d.getTime())) return dobString;
+    return d.toLocaleDateString("th-TH", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  } catch {
+    return dobString;
+  }
+}
+
+export function PatientProfileCard({ patient, vn }: PatientProfileCardProps) {
   if (!patient) return null;
+
+  const displayVn =
+    vn ||
+    patient.encounters?.[0]?.en ||
+    (patient.hn === "08-24-00030" ? "08-24-110023" : undefined);
 
   return (
     <div className="p-3 bg-gradient-to-br from-blue-50/80 to-slate-50 dark:from-slate-900 dark:to-slate-800/80 border-b border-slate-200 dark:border-slate-800">
@@ -43,6 +64,7 @@ export function PatientProfileCard({ patient }: PatientProfileCardProps) {
             </div>
           )}
 
+          {/* Row 3: HN & Gender / Age */}
           <div className="mt-1 flex items-center gap-1.5 flex-wrap">
             <span className="font-mono text-xs font-bold text-blue-700 dark:text-blue-300 bg-blue-100/70 dark:bg-blue-900/60 px-1.5 py-0.5 rounded">
               HN: {patient.hn}
@@ -51,40 +73,25 @@ export function PatientProfileCard({ patient }: PatientProfileCardProps) {
               {patient.gender || "-"} • {patient.age_display || "-"}
             </span>
           </div>
+
+          {/* Row 4: VN & Shifted Date of Birth */}
+          <div className="mt-1 flex items-center gap-2 flex-wrap">
+            {displayVn && (
+              <span className="font-mono text-xs font-semibold text-blue-800 dark:text-blue-200 bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 px-1.5 py-0.5 rounded shrink-0">
+                VN: {displayVn}
+              </span>
+            )}
+            {patient.dob && (
+              <span className="text-[11px] text-slate-500 whitespace-nowrap">
+                <span className="text-slate-400">วันเกิด: </span>
+                <span className="font-medium text-slate-700 dark:text-slate-300">
+                  {formatThaiDob(patient.dob)}
+                </span>
+              </span>
+            )}
+          </div>
         </div>
       </div>
-
-      {/* DOB, Rights & National ID */}
-      <div className="mt-2.5 pt-2 border-t border-slate-200/60 dark:border-slate-800 space-y-1 text-[11px] text-slate-600 dark:text-slate-400">
-        <div className="grid grid-cols-2 gap-1">
-          <div>
-            <span className="text-slate-400">วันเกิด: </span>
-            <span className="font-medium text-slate-800 dark:text-slate-200">
-              {patient.dob || "-"}
-            </span>
-          </div>
-          <div>
-            <span className="text-slate-400">สิทธิ: </span>
-            <span className="font-medium text-slate-800 dark:text-slate-200 truncate block" title={patient.rights}>
-              {patient.rights || "ชำระเงินเอง"}
-            </span>
-          </div>
-        </div>
-        {patient.id_card && (
-          <div className="text-[10px] text-slate-500 font-mono">
-            <span className="text-slate-400">เลขบัตร: </span>
-            <span className="text-slate-700 dark:text-slate-300 font-medium">{patient.id_card}</span>
-          </div>
-        )}
-      </div>
-
-      {/* Allergy warning if any */}
-      {patient.allergies && (
-        <div className="mt-2 flex items-center gap-1.5 text-[10px] text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-950/60 px-2 py-1 rounded border border-red-200 dark:border-red-900 font-medium">
-          <AlertTriangle className="h-3 w-3 text-red-500 shrink-0" />
-          <span className="truncate">แพ้ยา: {patient.allergies}</span>
-        </div>
-      )}
     </div>
   );
 }

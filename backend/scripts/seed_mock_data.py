@@ -169,7 +169,7 @@ def seed_data():
                 department_name="ศัลยกรรม (Surgery Unit)",
                 doctor_code="YH00355",
                 doctor_name="นพ. สุรชัย พัฒนากูล",
-                encounter_type="OPD",
+                encounter_type="IPD",
                 status="Completed"
             ),
             Encounter(

@@ -6,44 +6,51 @@ import {
   DocumentTreeResponse,
   DocumentGroupBy,
   DocumentCategoryType,
+  EncounterFilterType,
 } from "@/types/document";
 import { PatientProfileCard } from "./patient-profile-card";
-import { ViewModeTabs } from "./view-mode-tabs";
 import { DocumentGroupFilter } from "./document-group-filter";
 import { DocumentTreeView } from "./document-tree-view";
 import { DocumentSearchInput } from "./document-search-input";
+import { cn } from "@/lib/utils";
 
 interface EscanSidebarProps {
   patient: Patient | null;
+  vn?: string | null;
   treeData: DocumentTreeResponse | null;
   selectedDocId: string | null;
   groupBy: DocumentGroupBy;
   categoryType: DocumentCategoryType;
+  encounterType?: EncounterFilterType;
   searchQuery: string;
-  doctorOnly: boolean;
+  doctorOnly?: boolean;
   loadingPatient?: boolean;
   loadingTree?: boolean;
   onSelectDocument: (docId: string) => void;
   onChangeGroupBy: (group: DocumentGroupBy) => void;
   onChangeCategoryType: (type: DocumentCategoryType) => void;
+  onChangeEncounterType?: (type: EncounterFilterType) => void;
   onChangeSearchQuery: (query: string) => void;
-  onToggleDoctorOnly: () => void;
+  onToggleDoctorOnly?: () => void;
   className?: string;
 }
 
 export function EscanSidebar({
   patient,
+  vn,
   treeData,
   selectedDocId,
   groupBy,
   categoryType,
+  encounterType = "all",
   searchQuery,
-  doctorOnly,
+  doctorOnly = false,
   loadingPatient,
   loadingTree,
   onSelectDocument,
   onChangeGroupBy,
   onChangeCategoryType,
+  onChangeEncounterType,
   onChangeSearchQuery,
   onToggleDoctorOnly,
   className = "",
@@ -53,7 +60,7 @@ export function EscanSidebar({
       className={`w-72 md:w-80 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col h-full shrink-0 select-none overflow-hidden ${className}`}
     >
       {/* 1. Patient Profile Info */}
-      <PatientProfileCard patient={patient} />
+      <PatientProfileCard patient={patient} vn={vn} />
 
       {/* 2. In-Chart Document Search Bar (ค้นหาเอกสารในเวชระเบียนนี้) */}
       <div className="p-2 border-b border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900">
@@ -65,19 +72,12 @@ export function EscanSidebar({
         />
       </div>
 
-      {/* 3. View Mode Tabs (Doctor vs Not Doctor + My Documents toggle) */}
-      <ViewModeTabs
-        activeTab={categoryType}
-        onChangeTab={onChangeCategoryType}
-        doctorOnly={doctorOnly}
-        onToggleDoctorOnly={onToggleDoctorOnly}
-      />
-
-      {/* 4. Group Filter (Visit Date / Caregiver / Category) */}
+      {/* 3. Group Filter (Visit Date / Care provider / Doc Type + OPD/IPD/O+I) */}
       <DocumentGroupFilter
         activeGroup={groupBy}
         onChangeGroup={onChangeGroupBy}
-        categoryType={categoryType}
+        encounterType={encounterType}
+        onChangeEncounterType={onChangeEncounterType}
       />
 
       {/* 5. Collapsible Multi-Level Document Tree */}

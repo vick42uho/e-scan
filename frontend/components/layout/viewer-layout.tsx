@@ -17,17 +17,20 @@ import {
   DocumentTreeResponse,
   DocumentGroupBy,
   DocumentCategoryType,
+  EncounterFilterType,
   DocumentItem,
 } from "@/types/document";
 import { ViewerState, ViewerControls } from "@/types/viewer";
 
 interface ViewerLayoutProps {
   patient: Patient | null;
+  vn?: string | null;
   treeData: DocumentTreeResponse | null;
   currentDocument: DocumentItem | null;
   selectedDocId: string | null;
   groupBy: DocumentGroupBy;
   categoryType: DocumentCategoryType;
+  encounterType?: EncounterFilterType;
   searchQuery: string;
   doctorOnly: boolean;
   viewerState: ViewerState;
@@ -40,23 +43,25 @@ interface ViewerLayoutProps {
   onToggleLeftSidebar?: () => void;
   rightSidebarOpen?: boolean;
   onToggleRightSidebar?: () => void;
-  onSelectPersona?: (persona: import("./top-navbar").UserPersona) => void;
   onSelectDocument: (docId: string) => void;
   onChangeGroupBy: (group: DocumentGroupBy) => void;
   onChangeCategoryType: (type: DocumentCategoryType) => void;
+  onChangeEncounterType?: (type: EncounterFilterType) => void;
   onChangeSearchQuery: (query: string) => void;
-  onToggleDoctorOnly: () => void;
+  onToggleDoctorOnly?: () => void;
 }
 
 export function ViewerLayout({
   patient,
+  vn,
   treeData,
   currentDocument,
   selectedDocId,
   groupBy,
   categoryType,
+  encounterType = "all",
   searchQuery,
-  doctorOnly,
+  doctorOnly = false,
   viewerState,
   viewerControls,
   userId,
@@ -67,10 +72,10 @@ export function ViewerLayout({
   onToggleLeftSidebar,
   rightSidebarOpen = true,
   onToggleRightSidebar,
-  onSelectPersona,
   onSelectDocument,
   onChangeGroupBy,
   onChangeCategoryType,
+  onChangeEncounterType,
   onChangeSearchQuery,
   onToggleDoctorOnly,
 }: ViewerLayoutProps) {
@@ -84,7 +89,7 @@ export function ViewerLayout({
       <TopNavbar
         patient={patient}
         userId={userId}
-        onSelectPersona={onSelectPersona}
+        isSidebarOpen={leftSidebarOpen}
         onToggleMobileSidebar={() => setMobileDrawerOpen(true)}
       />
 
@@ -99,10 +104,12 @@ export function ViewerLayout({
         >
           <EscanSidebar
             patient={patient}
+            vn={vn || currentDocument?.en}
             treeData={treeData}
             selectedDocId={selectedDocId}
             groupBy={groupBy}
             categoryType={categoryType}
+            encounterType={encounterType}
             searchQuery={searchQuery}
             doctorOnly={doctorOnly}
             loadingPatient={loadingPatient}
@@ -110,6 +117,7 @@ export function ViewerLayout({
             onSelectDocument={onSelectDocument}
             onChangeGroupBy={onChangeGroupBy}
             onChangeCategoryType={onChangeCategoryType}
+            onChangeEncounterType={onChangeEncounterType}
             onChangeSearchQuery={onChangeSearchQuery}
             onToggleDoctorOnly={onToggleDoctorOnly}
             className="w-72 md:w-80 h-full border-r border-slate-200 dark:border-slate-800"
@@ -137,10 +145,12 @@ export function ViewerLayout({
             <SheetTitle className="sr-only">เมนูประวัติและเอกสาร</SheetTitle>
             <EscanSidebar
               patient={patient}
+              vn={vn || currentDocument?.en}
               treeData={treeData}
               selectedDocId={selectedDocId}
               groupBy={groupBy}
               categoryType={categoryType}
+              encounterType={encounterType}
               searchQuery={searchQuery}
               doctorOnly={doctorOnly}
               loadingPatient={loadingPatient}
@@ -151,6 +161,7 @@ export function ViewerLayout({
               }}
               onChangeGroupBy={onChangeGroupBy}
               onChangeCategoryType={onChangeCategoryType}
+              onChangeEncounterType={onChangeEncounterType}
               onChangeSearchQuery={onChangeSearchQuery}
               onToggleDoctorOnly={onToggleDoctorOnly}
               className="w-full h-full border-r-0"

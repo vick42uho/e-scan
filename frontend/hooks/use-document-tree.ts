@@ -6,6 +6,7 @@ import {
   DocumentTreeResponse,
   DocumentGroupBy,
   DocumentCategoryType,
+  EncounterFilterType,
   DocumentItem,
 } from "@/types/document";
 import { documentApi } from "@/services/document-api";
@@ -13,7 +14,8 @@ import { documentApi } from "@/services/document-api";
 export function useDocumentTree(hn: string, initialUserId: string = "Staff") {
   const [treeData, setTreeData] = useState<DocumentTreeResponse | null>(null);
   const [groupBy, setGroupBy] = useState<DocumentGroupBy>("visit_date");
-  const [categoryType, setCategoryType] = useState<DocumentCategoryType>("doctor");
+  const [categoryType, setCategoryType] = useState<DocumentCategoryType>("all");
+  const [encounterType, setEncounterType] = useState<EncounterFilterType>("all");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [doctorOnly, setDoctorOnly] = useState<boolean>(false);
   const [doctorCode, setDoctorCode] = useState<string>("");
@@ -36,12 +38,14 @@ export function useDocumentTree(hn: string, initialUserId: string = "Staff") {
     try {
       // If doctorOnly is toggled, pass doctorCode or filter doctor
       const activeDocFilter = doctorOnly ? (doctorCode || "YH00412") : undefined;
+      const activeEncounterFilter = groupBy === "visit_date" ? encounterType : "all";
       const data = await documentApi.getTree(
         hn,
         groupBy,
         categoryType,
         searchQuery,
-        activeDocFilter
+        activeDocFilter,
+        activeEncounterFilter
       );
       setTreeData(data);
 
@@ -61,7 +65,7 @@ export function useDocumentTree(hn: string, initialUserId: string = "Staff") {
     } finally {
       setLoadingTree(false);
     }
-  }, [hn, groupBy, categoryType, searchQuery, doctorOnly, doctorCode]);
+  }, [hn, groupBy, categoryType, searchQuery, doctorOnly, doctorCode, encounterType]);
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -104,6 +108,8 @@ export function useDocumentTree(hn: string, initialUserId: string = "Staff") {
     setGroupBy,
     categoryType,
     setCategoryType,
+    encounterType,
+    setEncounterType,
     searchQuery,
     setSearchQuery,
     doctorOnly,

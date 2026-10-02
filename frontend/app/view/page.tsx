@@ -1,7 +1,7 @@
 "use client";
 
 import React, { Suspense, useState } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { usePatient } from "@/hooks/use-patient";
 import { useDocumentTree } from "@/hooks/use-document-tree";
 import { useViewerControls } from "@/hooks/use-viewer-controls";
@@ -12,11 +12,11 @@ import { Loader2 } from "lucide-react";
 
 function EscanViewerContent() {
   const searchParams = useSearchParams();
-  const router = useRouter();
 
-  // Read URL params (from HIS/EMR or direct link)
+  // Read URL params (strictly ?hn=... without forced user/role params)
   const hnParam = searchParams.get("hn") || "08-24-00030";
-  const userParam = searchParams.get("user") || "YH1005";
+  const userParam = searchParams.get("user") || "Staff";
+  const vnParam = searchParams.get("vn") || searchParams.get("en");
 
   // Modular Custom Hooks
   const { patient, loading: loadingPatient, changeHn } = usePatient(hnParam);
@@ -26,12 +26,12 @@ function EscanViewerContent() {
     setGroupBy,
     categoryType,
     setCategoryType,
+    encounterType,
+    setEncounterType,
     searchQuery,
     setSearchQuery,
     doctorOnly,
     setDoctorOnly,
-    doctorCode,
-    setDoctorCode,
     selectedDocId,
     setSelectedDocId,
     currentDocument,
@@ -57,20 +57,6 @@ function EscanViewerContent() {
     toggleRightSidebar
   );
 
-  // Handlers
-  const handleSelectPersona = (persona: import("@/components/layout/top-navbar").UserPersona) => {
-    const params = new URLSearchParams(searchParams.toString());
-    params.set("user", persona.id);
-    if (persona.role) params.set("role", persona.role);
-    if (persona.doctorCode) {
-      setDoctorCode(persona.doctorCode);
-    } else {
-      setDoctorCode("");
-      setDoctorOnly(false);
-    }
-    router.push(`/view?${params.toString()}`);
-  };
-
   const handleSelectDocument = (docId: string) => {
     setSelectedDocId(docId);
     viewerControls.setPage(1);
@@ -83,11 +69,13 @@ function EscanViewerContent() {
   return (
     <ViewerLayout
       patient={patient}
+      vn={currentDocument?.en || vnParam}
       treeData={treeData}
       currentDocument={currentDocument}
       selectedDocId={selectedDocId}
       groupBy={groupBy}
       categoryType={categoryType}
+      encounterType={encounterType}
       searchQuery={searchQuery}
       doctorOnly={doctorOnly}
       viewerState={viewerState}
@@ -100,10 +88,10 @@ function EscanViewerContent() {
       onToggleLeftSidebar={toggleLeftSidebar}
       rightSidebarOpen={rightSidebarOpen}
       onToggleRightSidebar={toggleRightSidebar}
-      onSelectPersona={handleSelectPersona}
       onSelectDocument={handleSelectDocument}
       onChangeGroupBy={setGroupBy}
       onChangeCategoryType={handleChangeCategoryType}
+      onChangeEncounterType={setEncounterType}
       onChangeSearchQuery={setSearchQuery}
       onToggleDoctorOnly={() => setDoctorOnly(!doctorOnly)}
     />

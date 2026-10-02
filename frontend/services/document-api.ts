@@ -4,6 +4,7 @@ import {
   DocumentTreeResponse,
   DocumentGroupBy,
   DocumentCategoryType,
+  EncounterFilterType,
 } from "@/types/document";
 
 export const documentApi = {
@@ -12,12 +13,16 @@ export const documentApi = {
     groupBy: DocumentGroupBy = "visit_date",
     categoryType: DocumentCategoryType = "all",
     query?: string,
-    doctorCode?: string
+    doctorCode?: string,
+    encounterType?: EncounterFilterType
   ) => {
     const params = new URLSearchParams({
       group_by: groupBy,
       category_type: categoryType,
     });
+    if (encounterType && encounterType !== "all") {
+      params.append("encounter_type", encounterType);
+    }
     if (query && query.trim()) {
       params.append("query", query.trim());
     }
