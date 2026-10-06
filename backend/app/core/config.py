@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     # Database
     DATABASE_URL: str = os.getenv(
         "DATABASE_URL",
-        "postgresql://dev_admin:it240@10.200.11.2:5432/yanhee_escan_db"
+        "postgresql://admin:it240@10.200.120.33:5434/yanhee_escan_db"
     )
     
     # Vendor Integration API Security

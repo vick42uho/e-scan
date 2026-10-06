@@ -1,4 +1,4 @@
-# Yanhee e-Scan System (DMS) v3.1 Secured
+# Yanhee e-Scan System (DMS) v3.2 Secured
 **ระบบจัดเก็บ สแกนนำเข้า และเปิดดูเอกสารเวชระเบียน โรงพยาบาลยันฮี (Yanhee Hospital)**
 
 ---
@@ -17,31 +17,33 @@ DMS/
 │   │   │   ├── files.py           # สตรีมไฟล์ภาพ/PDF และลายน้ำ
 │   │   │   ├── audit.py           # บันทึก Audit Log การเข้าถึง
 │   │   │   └── scan.py            # API สแกนนำเข้า, เพิ่มหมวดหมู่, Patient Lookup, Vendor Upload
-│   │   ├── core/                  # Database Engine (PostgreSQL) และ App Settings
+│   │   ├── core/                  # Database Engine (PostgreSQL), App Settings และ Storage Resolver (storage.py)
 │   │   ├── models/                # SQLAlchemy Models (Patient, Encounter, Document, Category, AuditLog)
 │   │   ├── schemas/               # Pydantic Schemas (DTOs ตรวจสอบ Input/Output)
 │   │   ├── services/              # Business Logic
 │   │   │   ├── patient_service.py # บริการข้อมูลคนไข้
-│   │   │   ├── document_service.py# บริการเอกสารและ Tree
+│   │   │   ├── document_service.py# บริการเอกสารและ Tree (เรียง Visit Date แบบ Descending)
 │   │   │   ├── file_service.py    # สตรีมไฟล์ภาพและเรนเดอร์ PDF สดด้วย PyMuPDF (Zero Disk Bloat)
 │   │   │   ├── scan_service.py    # จัดการสแกน, หมวดหมู่ไดนามิก, Magic Bytes & Vendor Upload
 │   │   │   └── audit_service.py   # จัดเก็บบันทึกประวัติการกระทำความปลอดภัย
 │   │   ├── utils/                 # Utility: Dynamic Watermark Generator (Pillow)
 │   │   └── main.py                # FastAPI Entrypoint (CORS & Lifespan)
-│   ├── storage/documents/         # จัดเก็บไฟล์ภาพสแกนเวชระเบียนและเอกสาร PDF จริง 100%
+│   ├── storage/documents/{HN}/    # จัดเก็บไฟล์ภาพสแกนเวชระเบียนและ PDF แยกตามโฟลเดอร์ HN 100%
 │   └── scripts/
 │       ├── init_db.py             # สคริปต์สร้างตารางฐานข้อมูลอัตโนมัติ
 │       ├── seed_mock_data.py      # สคริปต์จำลองข้อมูลผู้ป่วยและเชื่อมโยงเอกสารสแกนจริง
-│       └── test_new_scan_features.py # ชุดทดสอบ API สแกน, Lookup, หมวดหมู่ และ Vendor Upload
+│       ├── migrate_storage_by_hn.py # สคริปต์ย้ายไฟล์เข้าโฟลเดอร์ตาม HN และปรับ Relative Path ใน DB
+│       └── test_e2e_scan.py       # ชุดทดสอบ End-to-End สแกน, Lookup, หมวดหมู่, อัปโหลด และ Tree View
 │
 ├── frontend/                      # Next.js 16 + TypeScript + Tailwind CSS (Turbopack)
 │   ├── app/
+│   │   ├── layout.tsx             # Root Layout พร้อมฟอนต์ Sarabun / TH Sarabun PSK แบบ Local 100%
 │   │   ├── view/page.tsx          # หน้าจอเปิดดูเวชระเบียน (?hn=...)
 │   │   └── scan/page.tsx          # หน้าจอสแกนและนำเข้าเอกสารเวชระเบียน (/scan)
 │   ├── components/
 │   │   ├── ui/                    # shadcn/ui Components (Button, Input, Combobox, Dialog, ScrollArea...)
 │   │   │   └── combobox.tsx       # Searchable Combobox Component มาตรฐานระบบ
-│   │   ├── scan/                  # ScanForm, ScanPreviewCanvas, ScanTopBar, ScanActions
+│   │   ├── scan/                  # ScanForm, ScanPreviewCanvas, ScanTopBar, ScanActions, SaveFeedbackDialog
 │   │   ├── viewer/                # DocumentViewerCanvas, ViewerToolbar, ViewerHeader, ThumbnailStrip, PrintDialog
 │   │   ├── sidebar/               # EscanSidebar, PatientProfileCard, DocumentGroupFilter, DocumentTreeView
 │   │   ├── common/                # Reusable Components (EmptyState, StatusPill, LoadingSkeleton)
@@ -233,4 +235,73 @@ bun run dev --port 3000
   3. **Doctype (หมวดหมู่เอกสาร)**: จับคู่รหัสเอกสาร (เช่น `OPD-NOTE`) กับตาราง `document_categories` ตาม `code`, `category_type`, `name_en`, หรือ `name_th` และนำ `id` ไปเลือกใน Combobox หมวดหมู่เอกสาร พร้อมตั้งชื่อเอกสาร (`title`) ให้ทันที
   4. **DOB & Age**: สกัดวันเดือนปีเกิดและคำนวณอายุของผู้ป่วยเทียบกับปีปัจจุบัน (เช่น `20 ปี`) โดยอัตโนมัติ
   5. **Enrichment จากฐานข้อมูล**: ค้นหาข้อมูลผู้ป่วยในระบบ DMS เติมชื่อ-นามสกุล, เพศ, และแพทย์ผู้ตรวจให้อัตโนมัติทันทีที่สแกนหรือดึงข้อมูล
+
+---
+
+## 📁 สถาปัตยกรรมการจัดเก็บไฟล์แยกตามโฟลเดอร์ HN (HN-Partitioned Storage Engine)
+
+เพื่อความเป็นระเบียบและประสิทธิภาพการจัดการไฟล์ในระดับ Production (ระดับแสนถึงล้านไฟล์):
+
+1. **โครงสร้างโฟลเดอร์แบบจำแนกตาม HN**:
+   * ไฟล์เอกสารสแกนและ PDF ทั้งหมดถูกจัดเก็บแยกเป็นโฟลเดอร์ตามหมายเลขประจำตัวผู้ป่วย (HN):
+     ```
+     backend/storage/documents/
+     ├── 08-24-00030/
+     │   ├── 08-24-00030_20261005093135_a4d32227.png
+     │   ├── doc-01.pdf
+     │   └── doc_opd_clinical_chart.png
+     ├── 08-20-800150/
+     ├── 08-07-000914/
+     └── 000000001/
+     ```
+   * หมดปัญหาไฟล์กระจัดกระจายปะปนกันที่ root โฟลเดอร์
+2. **โมดูลควบคุมและแก้ไข Path (`backend/app/core/storage.py`)**:
+   * `hn_folder(hn)`: กรอง Sanitization ป้องกัน Path Traversal (`../`) และสร้างโฟลเดอร์คนไข้ให้อัตโนมัติ
+   * `build_storage_path(hn, filename)`: จัดเก็บไฟล์ลงโฟลเดอร์ HN และคืนค่าเป็น **Relative Path** (`{HN}/{filename}`) สำหรับบันทึกลงฐานข้อมูล
+   * `resolve_storage_path(file_path)`: รองรับทั้ง Relative Path ใหม่, Absolute Path เดิม และ Fallback เก่า ทำให้ระบบเข้ากันได้ย้อนหลัง 100%
+3. **การแปลงข้อมูลเก่าแบบปลอดภัย (Live Storage Migration - `migrate_storage_by_hn.py`)**:
+   * ย้ายไฟล์เดิมทั้งหมด 28 รายการเข้าสู่โฟลเดอร์ตาม HN สำเร็จ 100% (Errors = 0)
+   * ใช้กลยุทธ์ **Copy-then-Cleanup** ปลอดภัยต่อไฟล์ Mock ที่ถูกผูกกับหลาย HN และล้างไฟล์ซ้ำซ้อนที่ root อย่างหมดจด
+
+---
+
+## 📅 ระบบวันที่รับบริการ (Visit Date) และการเรียงลำดับ Tree View แบบ Descending
+
+1. **ช่องกรอกวันที่รับบริการ (Visit Date) ในหน้า Scan**:
+   * อยู่ในส่วน *ข้อมูลการรับบริการ (Encounter)*
+   * **ตรวจจับและล็อกอัตโนมัติจาก HIS**: หากระบบตรวจพบว่า VN / Encounter มีอยู่ในประวัติของคนไข้แล้ว ระบบจะดึง `visit_date` ขึ้นมาให้อัตโนมัติ พร้อมแสดง Badge **"จากระบบ HIS 🔒"** และปิดการแก้ไข เพื่อป้องกันข้อมูลขัดแย้ง
+   * **กำหนดวันตรวจรักษาสำหรับ VN ใหม่**: หากเป็น VN ใหม่ เจ้าหน้าที่สามารถเลือกวันที่ตรวจรักษาได้ตามจริง (จำกัดไม่เกินวันปัจจุบัน) พร้อมแสดงปี พ.ศ. กำกับ
+2. **การจัดกลุ่มใน Tree View แบบเรียงจากใหม่ไปเก่า (Descending Chronological Order)**:
+   * ในหน้า View เอกสารจะถูกจัดกลุ่มตาม `Encounter.visit_date` (และ fallback เป็น `scan_date` เวลาไทย `Asia/Bangkok`)
+   * ปรับการเรียงลำดับกลุ่มวันที่จาก **"วันล่าสุด ➔ วันในอดีต"** (เช่น `05-10-2026`, `03-10-2026`, `28-02-2020`...) เพื่อให้แพทย์เห็นประวัติการตรวจปัจจุบันได้ทันทีโดยไม่ต้องเลื่อนลงล่าง
+   * ปรับใช้ `joinedload(Document.encounter)` ใน Backend เพื่อดึงข้อมูลรวดเร็วในรอบเดียว (Zero N+1 Query)
+
+---
+
+## 🔤 ระบบฟอนต์มาตรฐานโรงพยาบาลแบบออฟไลน์ 100% (Offline Hospital Typography)
+
+1. **รองรับ Intranet โรงพยาบาล 100% (Zero External CDN Dependency)**:
+   * ติดตั้งฟอนต์ Google Fonts **Sarabun** (Regular, Medium, SemiBold, Bold) และ **TH Sarabun PSK** ไว้ใน `frontend/public/fonts/`
+   * โหลดผ่าน `next/font/local` ใน `app/layout.tsx` ทำให้หน้าเว็บโหลดเร็วทันที แม้เครื่องลูกข่ายในโรงพยาบาลจะไม่มีการเชื่อมต่ออินเทอร์เน็ตภายนอก
+2. **ความสม่ำเสมอของ UI และปราศจาก Hydration Error**:
+   * กำหนดขนาดตัวอักษรและ Line-height ที่เหมาะสมกับภาษาไทย อ่านง่าย สบายตา
+   * ป้องกันปัญหา React Hydration Mismatch และการสลับฟอนต์กระพริบ (FOUT)
+
+---
+
+## 📊 สถานะความคืบหน้าของโครงการ (Current Progress & Milestones)
+
+| โมดูล / ฟีเจอร์ | สถานะ | รายละเอียด |
+|---|:---:|---|
+| **E-Scan Viewer Layout (/view)** | ✅ เสร็จสมบูรณ์ | รองรับ 3 คอลัมน์, ย่อ/ขยาย Sidebar, Touch Gestures, Watermark |
+| **Interactive Canvas Engine** | ✅ เสร็จสมบูรณ์ | ซูม 20%-400%, Pan, หมุน 90°, ฟิลเตอร์สี, พิมพ์รายงาน |
+| **Zero-Disk PyMuPDF Streaming** | ✅ เสร็จสมบูรณ์ | สตรีมหน้า PDF On-The-Fly พร้อมปุ่มเปิด PDF ต้นฉบับ |
+| **Document Scanning (/scan)** | ✅ เสร็จสมบูรณ์ | รองรับทั้งสแกนเนอร์ TWAIN/WIA (Port 18000) และไฟล์ PDF/ภาพ |
+| **Thai AI OCR (PaddleOCR ONNX)**| ✅ เสร็จสมบูรณ์ | อ่านชื่อไทย, อายุ, วันเกิด, แพทย์, HN/VN และหมุนภาพอัตโนมัติ |
+| **Dynamic Category & Combobox** | ✅ เสร็จสมบูรณ์ | ดึงประเภทหมวดหมู่จาก DB จริง, เลื่อนลื่นไหล, เพิ่มหมวดหมู่ใหม่สด |
+| **Visit Date & HIS Encounter Sync** | ✅ เสร็จสมบูรณ์ | กรอก/ล็อกวันที่รับบริการ, Tree View เรียง Descending ใหม่➔เก่า |
+| **HN-Partitioned Storage** | ✅ เสร็จสมบูรณ์ | เก็บไฟล์แยกโฟลเดอร์ตาม `{HN}/...`, Relative Path ใน DB, ย้ายไฟล์ครบ 100% |
+| **Save Confirmation Modal** | ✅ เสร็จสมบูรณ์ | แสดงการ์ดสรุปข้อมูลเอกสาร พร้อมปุ่มเปิดดูทันทีและปุ่มสแกนเคสถัดไป |
+| **Offline Hospital Fonts** | ✅ เสร็จสมบูรณ์ | ฟอนต์ Sarabun และ TH Sarabun PSK ผ่าน LocalFont 100% ออฟไลน์ |
+
 

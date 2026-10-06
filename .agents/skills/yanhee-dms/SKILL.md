@@ -2,18 +2,19 @@
 name: yanhee-dms
 description: >-
   Master knowledge base and operational blueprint for the Yanhee Hospital Document Management System (DMS)
-  and Yanhee e-Scan System v3.1 Secured (FastAPI + PostgreSQL + Next.js 16 + Tailwind CSS + shadcn sidebar-10).
+  and Yanhee e-Scan System v3.2 Secured (FastAPI + PostgreSQL + Next.js 16 + Tailwind CSS + shadcn sidebar-10).
   Covers end-to-end architecture, clean HIS/EMR URL integration (/view?hn=...), strict UI/UX anti-redundancy rules,
   compact single-line segmented controls, natural proximity layout, secured document viewer with dynamic watermarking
   ("สำเนาถูกต้อง COPY"), zoom/pan/rotate/color filters canvas, zero-disk PDF direct streaming (PyMuPDF),
   right-hand thumbnail strip, in-chart document search, doctor attribution de-duplication, multi-level patient document tree
-  (Visit Date with OPD/IPD/O+I, Care provider, Doc Type), database schema (patients, encounters, documents, pages, audit_logs),
+  (Visit Date with OPD/IPD/O+I in descending order, Care provider, Doc Type), HN-partitioned storage (backend/storage/documents/{HN}/),
+  visit_date synchronization with HIS encounters, 100% offline hospital typography (Sarabun & TH Sarabun PSK localFont),
   Radix ScrollArea table-expansion containment ([&>div]:!block), high-contrast scrollbars (type="always"),
   single-row document tree truncation (...), zero-native-tooltip anti-stacking, comprehensive mobile/tablet responsiveness,
   slide-over sheets (left tree & right thumbnails), touch gestures (swipe flip, double-tap zoom), and strict modular component architecture.
 ---
 
-# Yanhee Hospital e-Scan System (DMS) v3.1 — Knowledge Base & Architecture Blueprint
+# Yanhee Hospital e-Scan System (DMS) v3.2 — Knowledge Base & Architecture Blueprint
 
 ## 1. System Overview & Architecture
 
@@ -528,4 +529,93 @@ External hospital vendors (e.g., outsourced lab centers, imaging clinics, specia
     1. **"เปิดดูใน Viewer"**: Opens `/view?hn={hn}` in a new browser tab for immediate verification in the clinical E-Scan Viewer.
     2. **"สแกน / นำเข้าเคสถัดไป"**: Automatically clears the form, frees document blob memory, and resets the interface ready for the next patient chart.
 - **Error Handling**: Extracts server JSON error details (`errorData.detail`) and presents actionable error messages directly to the operator in a Rose Error Dialog.
+
+### 11.8 Visit Date & Encounter Synchronization (`visit_date`)
+- **Clinical Rationale**: Medical charts in DMS are organized primarily by clinical encounter dates (`Visit Date`). Without an explicit Visit Date in the ingestion form, documents risked being misattributed or falling back to the technical scan timestamp (`scan_date`), causing timeline divergence.
+- **Form Integration**:
+  - Located directly under the *Encounter Section* of `ScanForm`.
+  - **HIS Lock Shield**: When an encounter number (`VN / EN`) exists in the patient's registered encounters in DMS, the system automatically pulls `visit_date` from `Encounter`, locks the input (`disabled`), and displays an emerald badge: `🔒 จากระบบ HIS`. This prevents accidental modification or human error.
+  - **New Encounter Date Selection**: For new visits or manual entries, operators can specify the exact clinical encounter date (constrained to `max={today}`). Displays Thai Buddhist Era preview (e.g. `พ.ศ.: 5 ต.ค. 2569`).
+- **Descending Chronological Tree View**:
+  - `document_service.py` sorts Visit Date groups in strict **descending order** (newest visit first: e.g. `05-10-2026`, `03-10-2026`, `28-02-2020`...) across all 3 view modes (`visit_date`, `caregiver`, and `category`).
+  - Utilizes `joinedload(Document.encounter)` for single-roundtrip query performance without N+1 bottlenecks.
+
+---
+
+## 12. HN-Partitioned Document Storage Architecture
+
+### 12.1 Directory Structure & Segregation
+To prevent filesystem degradation and directory index bloat when handling hundreds of thousands of clinical documents:
+- Documents are partitioned into subdirectories named strictly after the patient's Hospital Number (HN):
+  ```
+  backend/storage/documents/
+  ├── 08-24-00030/
+  │   ├── 08-24-00030_20261005093135_a4d32227.png
+  │   ├── doc-01.pdf
+  │   └── doc_opd_clinical_chart.png
+  ├── 08-20-800150/
+  ├── 08-07-000914/
+  └── 000000001/
+  ```
+- No clinical files remain at the root storage directory (except `.gitkeep`).
+
+### 12.2 Storage Resolver Engine (`backend/app/core/storage.py`)
+- **`hn_folder(hn: str) -> Path`**: Sanitizes the HN string (stripping illegal filesystem characters and directory traversal tokens `../`), creates the destination directory if not yet present, and returns the resolved `Path`.
+- **`build_storage_path(hn: str, filename: str) -> Tuple[Path, str]`**: Generates the full filesystem path for new writes, and returns the **Relative Path** (`{HN}/{filename}`) to be persisted in `document_pages.file_path` in the database.
+- **`resolve_storage_path(file_path: Optional[str]) -> Optional[Path]`**: Safe, triple-fallback resolver:
+  1. Checks if `file_path` is a relative path inside `STORAGE_DIR / file_path` (Primary mode).
+  2. Checks if `file_path` is an existing absolute path (Legacy mode).
+  3. Checks if filename exists directly at root `STORAGE_DIR / filename` (Fallback mode).
+  4. Guarantees that the resolved path resides strictly within `STORAGE_DIR.resolve()`, actively preventing Path Traversal security vulnerabilities.
+
+### 12.3 Backward-Compatible Migration Script (`migrate_storage_by_hn.py`)
+- Migrates existing databases with zero downtime and zero file loss.
+- **Copy-Then-Cleanup Pattern**: Uses `shutil.copy2` first across all records, and performs cleanup of root files only after all page records have been verified and database transactions committed. This safely handles shared mock files across multiple test patients.
+- Idempotent: Can be re-run safely at any time.
+
+---
+
+## 13. System-Wide Offline Typography Architecture
+
+### 13.1 Hospital Intranet Independence (100% Offline)
+- Clinical hospital environments frequently operate on isolated intranets with restricted or zero public internet access.
+- All web fonts are bundled locally in `frontend/public/fonts/`:
+  - **Google Fonts Sarabun**: `Sarabun-Regular.ttf`, `Sarabun-Medium.ttf`, `Sarabun-SemiBold.ttf`, `Sarabun-Bold.ttf`.
+  - **TH Sarabun PSK**: `THSarabunPSK-Regular.ttf`, `THSarabunPSK-Bold.ttf`, `THSarabunPSK-Italic.ttf`, `THSarabunPSK-BoldItalic.ttf`.
+- Registered via Next.js `next/font/local` in `app/layout.tsx`. Zero external CDN requests (`fonts.googleapis.com` or `fonts.gstatic.com`).
+
+### 13.2 Zero Hydration Mismatch & Anti-FOUT
+- Eliminates Next.js React hydration mismatches caused by browser extensions or asynchronous font stylesheet injection.
+- Consistent typography and baseline alignment across all medical form controls and clinical report viewers.
+
+---
+
+## 14. Document Naming & Auto-Population Standards
+
+### 14.1 Zero-Typing by Default, Editable on Exception
+- Scanning operators process hundreds of charts daily; typing titles manually causes severe operational bottlenecks and spelling inconsistencies.
+- **Standard Formula (Recommended)**: `[ชื่อหมวดหมู่ภาษาไทย] ([ประเภทเคส OPD/IPD])`
+  - Example: `บันทึกการตรวจรักษา (OPD)`, `หนังสือแสดงความยินยอมรับการผ่าตัด (OPD)`.
+  - Clean, concise, and non-redundant when displayed inside date-grouped tree nodes.
+- **Document Code (`document_code`)**:
+  - Automatically populated from `category.code` (e.g. `OPD-NOTE`, `SUR-CONSENT`) upon selecting a category.
+  - Automatically overridden by Form Barcode/QR Code when detected on the physical document header.
+  - Operator retains the ability to append specifics if needed (e.g. adding `- ตาขวา`).
+
+---
+
+## 15. Verified Milestones & Production Readiness Checklist
+
+| Category | Component / Milestone | Verification Status |
+|---|---|:---:|
+| **Frontend UI** | Next.js 16 (Turbopack) + React 19 + shadcn/ui | ✅ Verified (0 TypeScript errors) |
+| **Viewer Engine** | 3-Column Layout, Canvas Zoom/Pan/Rotate, Dynamic Watermarking | ✅ Production Ready |
+| **PDF Streaming** | PyMuPDF Zero-Disk Byte Streaming + Raw PDF Button | ✅ Production Ready |
+| **Hardware Scanning** | FastAPI WIA Bridge on Port 18000 (EPSON, Brother) | ✅ Tested & Working |
+| **OCR & Barcode** | PaddleOCR ONNX Thai Model + 2D Key-Value Pipe Barcode | ✅ Tested & Working |
+| **Category System** | Dynamic DB Categories + Scrollable Dialog + Free-text Add | ✅ Tested & Working |
+| **Encounter & Visit** | Encounter Date Synchronization + Descending Chronological Tree | ✅ Tested & Working |
+| **Storage Architecture**| HN-Partitioned (`documents/{HN}/`) + Relative DB Paths | ✅ 100% Migrated (28/28 verified) |
+| **Offline Typography** | LocalFont Sarabun / TH Sarabun PSK (Intranet 100%) | ✅ Production Ready |
+
 

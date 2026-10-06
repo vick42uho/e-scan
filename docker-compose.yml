@@ -1,0 +1,90 @@
+# ==============================================================================
+# Yanhee e-Scan System (DMS v3.1) - Docker Compose Configuration
+# Production Stack for Ubuntu 24.04.5 LTS
+# ==============================================================================
+
+services:
+  # ----------------------------------------------------------------------------
+  # 1. FastAPI Backend Service (Python 3.13 + uv + Uvicorn)
+  # ----------------------------------------------------------------------------
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: yanhee-dms-backend:latest
+    container_name: yanhee-dms-backend
+    restart: unless-stopped
+    environment:
+      - APP_NAME=Yanhee e-Scan DMS API
+      - APP_VERSION=3.1.0
+      - APP_ENV=production
+      - DEBUG=false
+      - DATABASE_URL=${DATABASE_URL:-postgresql://admin:it240@10.200.120.33:5434/yanhee_escan_db}
+      - VENDOR_API_KEY=${VENDOR_API_KEY:-yanhee-dms-vendor-sec-key-2026}
+      - CORS_ORIGINS=${CORS_ORIGINS:-*}
+      - TZ=Asia/Bangkok
+    volumes:
+      - ./backend/storage/documents:/app/storage/documents
+      - ./backend/storage/thumbnails:/app/storage/thumbnails
+    networks:
+      - dms-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 20s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+
+  # ----------------------------------------------------------------------------
+  # 2. Next.js Frontend Service (Next.js 16 + Standalone Node 20)
+  # ----------------------------------------------------------------------------
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_API_URL=/api/v1
+    image: yanhee-dms-frontend:latest
+    container_name: yanhee-dms-frontend
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - HOSTNAME=0.0.0.0
+      - NEXT_PUBLIC_API_URL=/api/v1
+      - TZ=Asia/Bangkok
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - dms-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/"]
+      interval: 20s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+
+  # ----------------------------------------------------------------------------
+  # 3. Nginx Reverse Proxy Gateway
+  # ----------------------------------------------------------------------------
+  nginx:
+    image: nginx:alpine
+    container_name: yanhee-dms-nginx
+    restart: unless-stopped
+    ports:
+      - "${PORT:-80}:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      backend:
+        condition: service_healthy
+      frontend:
+        condition: service_healthy
+    networks:
+      - dms-network
+
+networks:
+  dms-network:
+    name: yanhee-dms-network
+    driver: bridge
