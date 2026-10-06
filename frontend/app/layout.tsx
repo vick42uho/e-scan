@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist_Mono, DM_Sans } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -10,6 +11,33 @@ const dmSans = DM_Sans({ subsets: ["latin"], variable: "--font-sans" });
 const fontMono = Geist_Mono({
   subsets: ["latin"],
   variable: "--font-mono",
+});
+
+const fontSarabun = localFont({
+  src: [
+    {
+      path: "./fonts/SarabunPSK/THSarabun.ttf",
+      weight: "400",
+      style: "normal",
+    },
+    {
+      path: "./fonts/SarabunPSK/THSarabun-Italic.ttf",
+      weight: "400",
+      style: "italic",
+    },
+    {
+      path: "./fonts/SarabunPSK/THSarabun-Bold.ttf",
+      weight: "700",
+      style: "normal",
+    },
+    {
+      path: "./fonts/SarabunPSK/THSarabun-BoldItalic.ttf",
+      weight: "700",
+      style: "italic",
+    },
+  ],
+  variable: "--font-sarabun",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -26,7 +54,7 @@ export default function RootLayout({
     <html
       lang="th"
       suppressHydrationWarning
-      className={cn("antialiased", fontMono.variable, "font-sans", dmSans.variable)}
+      className={cn("antialiased", fontMono.variable, fontSarabun.variable, "font-sans", dmSans.variable)}
     >
       <body suppressHydrationWarning className="bg-slate-100 dark:bg-slate-950 min-h-screen">
         <ThemeProvider>
