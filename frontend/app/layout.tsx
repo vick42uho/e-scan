@@ -54,7 +54,12 @@ export default function RootLayout({
     <html
       lang="th"
       suppressHydrationWarning
-      className={cn("antialiased font-sans", fontMono.variable, fontSarabun.variable, dmSans.variable)}
+      className={cn(
+        "antialiased font-sans",
+        fontSarabun.variable,
+        fontMono.variable,
+        dmSans.variable
+      )}
     >
       <body
         suppressHydrationWarning
