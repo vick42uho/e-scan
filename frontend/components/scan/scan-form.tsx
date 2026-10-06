@@ -388,7 +388,7 @@ export function ScanForm({
                       }
                     }}
                     placeholder="00-00-00000"
-                    className="font-mono text-xs h-8 bg-white dark:bg-slate-900 flex-1"
+                    className="text-xs h-8 bg-white dark:bg-slate-900 flex-1"
                   />
                   <Button
                     type="button"
@@ -530,7 +530,7 @@ export function ScanForm({
                       }
                     }}
                     placeholder="ระบุเลขที่ VN / EN เช่น 08-24-110023"
-                    className="font-mono text-xs h-8 bg-white dark:bg-slate-900 flex-1"
+                    className="text-xs h-8 bg-white dark:bg-slate-900 flex-1"
                     list="encounters-datalist"
                   />
                   <Button
@@ -638,7 +638,7 @@ export function ScanForm({
                       onChange={(e) => updateField("visit_date", e.target.value)}
                       max={getTodayIso()}
                       className={cn(
-                        "text-xs h-8 bg-white dark:bg-slate-900 font-mono w-full",
+                        "text-xs h-8 bg-white dark:bg-slate-900 w-full",
                         isDateLocked && "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 cursor-not-allowed"
                       )}
                     />
@@ -675,14 +675,14 @@ export function ScanForm({
                       disabled={isDateLocked}
                       onChange={(e) => updateField("visit_time", e.target.value)}
                       className={cn(
-                        "text-xs h-8 bg-white dark:bg-slate-900 font-mono w-full",
+                        "text-xs h-8 bg-white dark:bg-slate-900 w-full",
                         isDateLocked && "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 cursor-not-allowed"
                       )}
                     />
                   </div>
                   <p className="text-[10px] text-muted-foreground mt-1 h-4 flex items-center truncate">
                     {(formData.visit_time || matchedEncounter?.visit_time) ? (
-                      <span className="font-mono text-slate-600 dark:text-slate-300">
+                      <span className="text-slate-600 dark:text-slate-300">
                         {formData.visit_time || matchedEncounter?.visit_time} น.
                       </span>
                     ) : (
@@ -797,7 +797,7 @@ export function ScanForm({
                   value={formData.document_code}
                   onChange={(e) => updateField("document_code", e.target.value)}
                   placeholder="เช่น OPD-MED-01"
-                  className="text-xs h-8 font-mono bg-white dark:bg-slate-900"
+                  className="text-xs h-8 bg-white dark:bg-slate-900"
                 />
               </div>
             </div>
@@ -936,7 +936,7 @@ export function ScanForm({
                   value={newCatCode}
                   onChange={(e) => setNewCatCode(e.target.value.toUpperCase())}
                   placeholder="เช่น RX_MED"
-                  className="text-xs h-8 font-mono"
+                  className="text-xs h-8"
                 />
               </div>
 

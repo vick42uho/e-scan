@@ -61,7 +61,7 @@ export function DocumentSearchInput({
       {value && totalFound !== undefined && (
         <div className="mt-1 flex items-center justify-between text-[10px] text-blue-600 dark:text-blue-400 px-1 font-medium">
           <span>กรองผลลัพธ์:</span>
-          <Badge variant="secondary" className="text-[10px] h-4 py-0 px-1.5 font-mono">
+          <Badge variant="secondary" className="text-[10px] h-4 py-0 px-1.5">
             พบ {totalFound} เอกสาร
           </Badge>
         </div>

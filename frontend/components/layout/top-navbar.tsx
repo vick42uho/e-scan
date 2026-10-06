@@ -94,7 +94,7 @@ export function TopNavbar({
             <span className="font-semibold text-white">{patient.name_th}</span>
             <Badge
               variant="secondary"
-              className="font-mono text-cyan-300 bg-blue-900/90 border-blue-700/40 text-[11px] h-4 py-0"
+              className="text-cyan-300 bg-blue-900/90 border-blue-700/40 text-[11px] h-4 py-0"
             >
               HN: {patient.hn}
             </Badge>
@@ -112,7 +112,7 @@ export function TopNavbar({
             <span className="text-[11px] font-medium hidden sm:inline">ระบบเชื่อมต่อ EMR/HIS</span>
             <Badge
               variant="secondary"
-              className="text-[10px] font-mono text-blue-300/80 bg-blue-900/60 border-0 h-4 px-1"
+              className="text-[10px] text-blue-300/80 bg-blue-900/60 border-0 h-4 px-1"
             >
               ONLINE
             </Badge>

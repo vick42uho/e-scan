@@ -121,7 +121,7 @@ export function ViewerToolbar({
             <TooltipContent>ซูมออก (-)</TooltipContent>
           </Tooltip>
 
-          <span className="w-12 text-center font-mono text-xs font-medium text-slate-600 dark:text-slate-400">
+          <span className="w-12 text-center text-xs font-medium text-slate-600 dark:text-slate-400">
             {zoomPercent}%
           </span>
 
@@ -146,7 +146,7 @@ export function ViewerToolbar({
                 variant="ghost"
                 size="sm"
                 onClick={controls.resetZoom}
-                className="h-8 px-2 text-xs font-mono"
+                className="h-8 px-2 text-xs"
               >
                 1:1
               </Button>
@@ -232,7 +232,7 @@ export function ViewerToolbar({
 
               <Badge
                 variant="outline"
-                className="px-1.5 sm:px-2 text-xs font-mono font-medium text-slate-700 dark:text-slate-300 border-0 h-auto"
+                className="px-1.5 sm:px-2 text-xs font-medium text-slate-700 dark:text-slate-300 border-0 h-auto"
               >
                 {state.currentPage} / {totalPages}
               </Badge>

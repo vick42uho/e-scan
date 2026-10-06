@@ -698,7 +698,7 @@ export default function ScanWorkspace() {
               <div className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-3 space-y-2 text-xs">
                 <div className="flex justify-between items-center pb-1.5 border-b border-slate-200/60 dark:border-slate-800">
                   <span className="text-muted-foreground">เลขประจำตัวผู้ป่วย (HN):</span>
-                  <span className="font-mono font-bold text-blue-700 dark:text-blue-400">{saveFeedback.savedInfo.hn}</span>
+                  <span className="font-bold text-blue-700 dark:text-blue-400">{saveFeedback.savedInfo.hn}</span>
                 </div>
                 <div className="flex justify-between items-center pb-1.5 border-b border-slate-200/60 dark:border-slate-800">
                   <span className="text-muted-foreground">ชื่อ-นามสกุล:</span>
@@ -715,7 +715,7 @@ export default function ScanWorkspace() {
                 {saveFeedback.savedInfo.visitDate && (
                   <div className="flex justify-between items-center pb-1.5 border-b border-slate-200/60 dark:border-slate-800">
                     <span className="text-muted-foreground">วันที่รับบริการ:</span>
-                    <span className="font-medium text-slate-700 dark:text-slate-200 font-mono">
+                    <span className="font-medium text-slate-700 dark:text-slate-200">
                       {formatThaiDate(saveFeedback.savedInfo.visitDate)}
                     </span>
                   </div>
@@ -822,7 +822,7 @@ export default function ScanWorkspace() {
               </DialogHeader>
 
               <div className="bg-rose-50/80 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 rounded-lg p-3 text-xs text-rose-800 dark:text-rose-300">
-                <p className="font-mono">{saveFeedback.message}</p>
+                <p>{saveFeedback.message}</p>
               </div>
 
               <DialogFooter className="pt-2">

@@ -129,14 +129,14 @@ export function ViewerHeader({ document }: ViewerHeaderProps) {
           {document.scan_date && (
             <div className="hidden xl:flex items-center gap-1 text-slate-500 dark:text-slate-400 shrink-0">
               <Calendar className="h-3 w-3 text-slate-400" />
-              <span className="font-mono text-[11px]">{formattedDate}</span>
+              <span className="text-[11px]">{formattedDate}</span>
             </div>
           )}
 
           {/* Total pages info pill */}
           <Badge
             variant="secondary"
-            className="hidden xs:inline-flex text-[10px] font-mono text-slate-500 dark:text-slate-400 bg-slate-200/80 dark:bg-slate-800 px-1.5 py-0 h-5 shrink-0 border-0"
+            className="hidden xs:inline-flex text-[10px] text-slate-500 dark:text-slate-400 bg-slate-200/80 dark:bg-slate-800 px-1.5 py-0 h-5 shrink-0 border-0"
           >
             รวม {document.total_pages} หน้า
           </Badge>

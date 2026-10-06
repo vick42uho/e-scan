@@ -111,7 +111,7 @@ export function ScanPreview({ pages, activeIndex, onSelectPage, onRemovePage, on
         <div className="bg-blue-50 dark:bg-blue-950/60 border-y border-blue-100 dark:border-blue-900 px-4 py-2 flex items-center gap-2 overflow-x-auto shrink-0">
           <span className="text-xs font-semibold text-blue-800 dark:text-blue-300 shrink-0">พบ Barcode / QR:</span>
           {activePage.barcodes.map((bc, idx) => (
-            <Badge key={idx} variant="outline" className="bg-white dark:bg-slate-900 border-blue-200 dark:border-blue-800 font-mono text-[11px] text-blue-700 dark:text-blue-300 shrink-0">
+            <Badge key={idx} variant="outline" className="bg-white dark:bg-slate-900 border-blue-200 dark:border-blue-800 text-[11px] text-blue-700 dark:text-blue-300 shrink-0">
               {bc.text} ({bc.format})
             </Badge>
           ))}

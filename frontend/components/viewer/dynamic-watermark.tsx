@@ -49,7 +49,7 @@ export function DynamicWatermark({
         <div className="text-blue-700/80 text-[9px] mt-0.5">
           ผู้เปิดดู: {displayName} [{userId}]
         </div>
-        <div className="text-blue-600/70 text-[8px] font-mono">
+        <div className="text-blue-600/70 text-[8px]">
           {currentDate} {currentTime}
         </div>
       </div>
@@ -59,7 +59,7 @@ export function DynamicWatermark({
         {Array.from({ length: 6 }).map((_, i) => (
           <div
             key={i}
-            className="flex justify-around text-slate-800 dark:text-slate-200 font-mono font-bold text-sm tracking-widest uppercase whitespace-nowrap"
+            className="flex justify-around text-slate-800 dark:text-slate-200 font-bold text-sm tracking-widest uppercase whitespace-nowrap"
           >
             <span>YANHEE E-SCAN • {userId} • {currentDate}</span>
             <span>FOR MEDICAL RECORD USE ONLY • {stampText}</span>

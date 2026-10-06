@@ -46,7 +46,7 @@ function ThumbnailCard({
         {!imageLoaded && !imageError && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-100 dark:bg-slate-800 animate-pulse text-slate-400">
             <FileText className="h-6 w-6 stroke-1 mb-1" />
-            <span className="text-[10px] font-mono">กำลังโหลด...</span>
+            <span className="text-[10px]">กำลังโหลด...</span>
           </div>
         )}
 
@@ -82,7 +82,7 @@ function ThumbnailCard({
         <Badge
           variant={isActive ? "default" : "secondary"}
           className={cn(
-            "absolute top-1.5 left-1.5 text-[10px] font-mono font-bold px-1.5 py-0 h-4 rounded shadow-sm border-0",
+            "absolute top-1.5 left-1.5 text-[10px] font-bold px-1.5 py-0 h-4 rounded shadow-sm border-0",
             isActive
               ? "bg-blue-600 text-white ring-1 ring-white/50"
               : "bg-slate-900/75 text-white backdrop-blur-[2px]"
@@ -133,7 +133,7 @@ export function ThumbnailStrip({
         </div>
         <Badge
           variant="secondary"
-          className="text-[10px] bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 font-mono px-1.5 py-0 h-4 border-0 font-bold"
+          className="text-[10px] bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 px-1.5 py-0 h-4 border-0 font-bold"
         >
           {pages.length} หน้า
         </Badge>

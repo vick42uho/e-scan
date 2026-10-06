@@ -127,7 +127,7 @@ export function SearchInput({
                         {patient.name_th}
                       </div>
                       <div className="text-[11px] text-slate-500">
-                        HN: <span className="font-mono">{patient.hn}</span> • {patient.gender || "-"} • {patient.age_display || "-"}
+                        HN: <span>{patient.hn}</span> • {patient.gender || "-"} • {patient.age_display || "-"}
                       </div>
                     </div>
                   </div>

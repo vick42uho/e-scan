@@ -61,7 +61,7 @@ export function PatientProfileCard({ patient }: PatientProfileCardProps) {
             </span>
             <Badge
               variant="secondary"
-              className="font-mono text-[10px] font-bold text-blue-700 dark:text-blue-300 bg-blue-100/80 dark:bg-blue-900/70 px-1.5 py-0 h-4 rounded shrink-0 border border-blue-200/60 dark:border-blue-800/60"
+              className="text-[10px] font-bold text-blue-700 dark:text-blue-300 bg-blue-100/80 dark:bg-blue-900/70 px-1.5 py-0 h-4 rounded shrink-0 border border-blue-200/60 dark:border-blue-800/60"
             >
               HN: {patient.hn}
             </Badge>

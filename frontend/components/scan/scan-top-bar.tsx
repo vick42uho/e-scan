@@ -125,7 +125,7 @@ export function ScanTopBar({ bridgeStatus, devices, selectedDeviceId, onSelectDe
               </Combobox>
               <Badge
                 variant="secondary"
-                className="text-[10px] font-mono shrink-0 bg-blue-800 text-cyan-200 border-0 hidden md:inline-flex h-4 px-1"
+                className="text-[10px] shrink-0 bg-blue-800 text-cyan-200 border-0 hidden md:inline-flex h-4 px-1"
               >
                 {uniqueDevices.length} เครื่อง
               </Badge>

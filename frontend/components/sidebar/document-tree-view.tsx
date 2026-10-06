@@ -153,7 +153,7 @@ function TreeNodeItem({
                 <Badge
                   variant="outline"
                   className={cn(
-                    "text-[9px] font-mono px-1 py-0 h-4 rounded-full shrink-0 border-0",
+                    "text-[9px] px-1 py-0 h-4 rounded-full shrink-0 border-0",
                     isSelected
                       ? "bg-blue-800 text-white"
                       : "bg-slate-200/80 dark:bg-slate-700 text-slate-600 dark:text-slate-300"
@@ -223,7 +223,7 @@ function TreeNodeItem({
 
           <Badge
             variant="secondary"
-            className="text-[10px] font-mono text-slate-500 bg-slate-200/80 dark:bg-slate-800 px-1.5 py-0 h-4 border-0 shrink-0"
+            className="text-[10px] text-slate-500 bg-slate-200/80 dark:bg-slate-800 px-1.5 py-0 h-4 border-0 shrink-0"
           >
             {node.count}
           </Badge>

@@ -94,14 +94,14 @@ export function PrintDialog({
           <div className="bg-slate-50 dark:bg-slate-900 p-3 rounded-lg border border-slate-200 dark:border-slate-800 space-y-1.5">
             <div className="font-semibold text-slate-800 dark:text-slate-100 flex items-center justify-between">
               <span className="truncate">{document.title}</span>
-              <Badge variant="secondary" className="font-mono text-[10px] shrink-0">
+              <Badge variant="secondary" className="text-[10px] shrink-0">
                 {document.total_pages} หน้า
               </Badge>
             </div>
             <div className="text-slate-500 flex items-center gap-2">
-              <span>HN: <span className="font-mono font-semibold text-slate-700 dark:text-slate-300">{document.hn}</span></span>
+              <span>HN: <span className="font-semibold text-slate-700 dark:text-slate-300">{document.hn}</span></span>
               {document.document_code && (
-                <Badge variant="outline" className="font-mono text-[10px] py-0 h-4">
+                <Badge variant="outline" className="text-[10px] py-0 h-4">
                   {document.document_code}
                 </Badge>
               )}
