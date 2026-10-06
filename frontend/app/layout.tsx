@@ -6,7 +6,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
-const dmSans = DM_Sans({ subsets: ["latin"], variable: "--font-sans" });
+const dmSans = DM_Sans({ subsets: ["latin"], variable: "--font-dm-sans" });
 
 const fontMono = Geist_Mono({
   subsets: ["latin"],
@@ -54,9 +54,12 @@ export default function RootLayout({
     <html
       lang="th"
       suppressHydrationWarning
-      className={cn("antialiased", fontMono.variable, fontSarabun.variable, "font-sans", dmSans.variable)}
+      className={cn("antialiased font-sans", fontMono.variable, fontSarabun.variable, dmSans.variable)}
     >
-      <body suppressHydrationWarning className="bg-slate-100 dark:bg-slate-950 min-h-screen">
+      <body
+        suppressHydrationWarning
+        className="bg-slate-100 dark:bg-slate-950 min-h-screen font-sans"
+      >
         <ThemeProvider>
           <TooltipProvider delayDuration={300}>{children}</TooltipProvider>
         </ThemeProvider>
