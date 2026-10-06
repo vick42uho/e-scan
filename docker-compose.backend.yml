@@ -1,0 +1,43 @@
+# ==============================================================================
+# Yanhee e-Scan System (DMS v3.1) - Backend & Database Server (10.200.120.33)
+# Production Stack: FastAPI (Python 3.13 + uv) + Uvicorn 4 Workers
+# ==============================================================================
+
+services:
+  # ----------------------------------------------------------------------------
+  # FastAPI Backend Service
+  # ----------------------------------------------------------------------------
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: yanhee-dms-backend:latest
+    container_name: yanhee-dms-backend
+    restart: unless-stopped
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    environment:
+      - APP_NAME=Yanhee e-Scan DMS API
+      - APP_VERSION=3.1.0
+      - APP_ENV=production
+      - DEBUG=false
+      - DATABASE_URL=${DATABASE_URL:-postgresql://admin:it240@10.200.120.33:5434/yanhee_escan_db}
+      - VENDOR_API_KEY=${VENDOR_API_KEY:-yanhee-dms-vendor-sec-key-2026}
+      - CORS_ORIGINS=${CORS_ORIGINS:-*}
+      - TZ=Asia/Bangkok
+    volumes:
+      - ./backend/storage/documents:/app/storage/documents
+      - ./backend/storage/thumbnails:/app/storage/thumbnails
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 20s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+    networks:
+      - backend-network
+
+networks:
+  backend-network:
+    name: yanhee-backend-network
+    driver: bridge

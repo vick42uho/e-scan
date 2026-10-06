@@ -1,4 +1,4 @@
-import { fetchApi } from './api-client';
+import { fetchApi, API_BASE_URL } from './api-client';
 import { 
   DocumentCategoryOption, 
   CreateCategoryPayload,
@@ -13,7 +13,7 @@ export async function getCategories(): Promise<DocumentCategoryOption[]> {
 }
 
 export async function createCategory(payload: CreateCategoryPayload): Promise<DocumentCategoryOption> {
-  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1"}/scan/categories`, {
+  const res = await fetch(`${API_BASE_URL}/scan/categories`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -31,7 +31,7 @@ export async function createCategory(payload: CreateCategoryPayload): Promise<Do
 
 export async function lookupPatientOrEncounter(query: string): Promise<PatientLookupResult> {
   const params = new URLSearchParams({ query });
-  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1"}/scan/patient-lookup?${params.toString()}`);
+  const res = await fetch(`${API_BASE_URL}/scan/patient-lookup?${params.toString()}`);
 
   if (!res.ok) {
     const errorData = await res.json().catch(() => ({}));
@@ -58,7 +58,7 @@ export async function uploadDocument(file: Blob, fileName: string, formData: Sca
   data.append('scan_by_name', 'ระบบทดสอบ');
   data.append('scan_by_role', 'Staff');
 
-  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1"}/scan/upload`, {
+  const res = await fetch(`${API_BASE_URL}/scan/upload`, {
     method: 'POST',
     body: data,
   });
@@ -79,7 +79,7 @@ export async function uploadAdditionalPage(documentId: string, file: Blob, fileN
     data.append('page_label', pageLabel);
   }
 
-  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1"}/scan/upload-page/${documentId}`, {
+  const res = await fetch(`${API_BASE_URL}/scan/upload-page/${documentId}`, {
     method: 'POST',
     body: data,
   });
@@ -102,7 +102,7 @@ export async function extractMetadata(
   data.append('file', file, fileName);
   data.append('mode', mode);
 
-  const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1"}/scan/extract-metadata`, {
+  const res = await fetch(`${API_BASE_URL}/scan/extract-metadata`, {
     method: 'POST',
     body: data,
   });
@@ -119,7 +119,7 @@ export async function detectBarcodesViaApi(file: Blob, fileName?: string): Promi
     const data = new FormData();
     data.append('file', file, fileName || 'document');
 
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1"}/scan/detect-barcode`, {
+    const res = await fetch(`${API_BASE_URL}/scan/detect-barcode`, {
       method: 'POST',
       body: data,
     });
