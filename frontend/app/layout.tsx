@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
-import { Geist_Mono, DM_Sans } from "next/font/google";
-import localFont from "next/font/local";
+import { Geist_Mono, DM_Sans, Sarabun } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -13,29 +12,9 @@ const fontMono = Geist_Mono({
   variable: "--font-mono",
 });
 
-const fontSarabun = localFont({
-  src: [
-    {
-      path: "./fonts/SarabunPSK/THSarabun.ttf",
-      weight: "400",
-      style: "normal",
-    },
-    {
-      path: "./fonts/SarabunPSK/THSarabun-Italic.ttf",
-      weight: "400",
-      style: "italic",
-    },
-    {
-      path: "./fonts/SarabunPSK/THSarabun-Bold.ttf",
-      weight: "700",
-      style: "normal",
-    },
-    {
-      path: "./fonts/SarabunPSK/THSarabun-BoldItalic.ttf",
-      weight: "700",
-      style: "italic",
-    },
-  ],
+const fontSarabun = Sarabun({
+  weight: ["300", "400", "500", "600", "700"],
+  subsets: ["thai", "latin"],
   variable: "--font-sarabun",
   display: "swap",
 });
