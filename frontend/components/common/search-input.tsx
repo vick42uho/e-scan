@@ -4,6 +4,10 @@ import React, { useState, useEffect, useRef } from "react";
 import { Search, X, Loader2, User } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Card } from "@/components/ui/card";
 import { patientApi } from "@/services/patient-api";
 import { PatientSearchResult } from "@/types/patient";
 
@@ -96,37 +100,45 @@ export function SearchInput({
 
       {/* Autocomplete Dropdown */}
       {isOpen && results.length > 0 && (
-        <div className="absolute z-50 left-0 right-0 mt-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg shadow-xl overflow-hidden text-xs">
-          <div className="p-1.5 font-medium text-slate-400 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
-            ผลการค้นหา ({results.length})
+        <Card className="absolute z-50 left-0 right-0 mt-1 p-0 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg shadow-xl overflow-hidden text-xs">
+          <div className="p-1.5 font-medium text-slate-400 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+            <span>ผลการค้นหา</span>
+            <Badge variant="secondary" className="text-[10px] h-4 px-1.5">
+              {results.length}
+            </Badge>
           </div>
-          <div className="max-h-60 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800">
-            {results.map((patient) => (
-              <button
-                key={patient.hn}
-                onClick={() => handleSelect(patient.hn)}
-                className="w-full text-left p-2 hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-colors flex items-center justify-between group"
-              >
-                <div className="flex items-center gap-2">
-                  <div className="h-7 w-7 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-blue-600 dark:text-blue-300 font-medium">
-                    <User className="h-3.5 w-3.5" />
-                  </div>
-                  <div>
-                    <div className="font-semibold text-slate-800 dark:text-slate-100 group-hover:text-blue-600">
-                      {patient.name_th}
+          <ScrollArea className="max-h-60">
+            <div className="divide-y divide-slate-100 dark:divide-slate-800">
+              {results.map((patient) => (
+                <button
+                  key={patient.hn}
+                  type="button"
+                  onClick={() => handleSelect(patient.hn)}
+                  className="w-full text-left p-2 hover:bg-blue-50 dark:hover:bg-blue-950/40 transition-colors flex items-center justify-between group cursor-pointer"
+                >
+                  <div className="flex items-center gap-2">
+                    <Avatar className="h-7 w-7 bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300">
+                      <AvatarFallback className="bg-blue-100 dark:bg-blue-900 text-blue-600 dark:text-blue-300">
+                        <User className="h-3.5 w-3.5" />
+                      </AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <div className="font-semibold text-slate-800 dark:text-slate-100 group-hover:text-blue-600">
+                        {patient.name_th}
+                      </div>
+                      <div className="text-[11px] text-slate-500">
+                        HN: <span className="font-mono">{patient.hn}</span> • {patient.gender || "-"} • {patient.age_display || "-"}
+                      </div>
                     </div>
-                    <div className="text-[11px] text-slate-500">
-                      HN: <span className="font-mono">{patient.hn}</span> • {patient.gender || "-"} • {patient.age_display || "-"}
-                    </div>
                   </div>
-                </div>
-                <div className="text-[10px] text-slate-400">
-                  {patient.document_count} เอกสาร
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
+                  <Badge variant="outline" className="text-[10px] h-4 px-1 text-slate-500">
+                    {patient.document_count} เอกสาร
+                  </Badge>
+                </button>
+              ))}
+            </div>
+          </ScrollArea>
+        </Card>
       )}
     </div>
   );

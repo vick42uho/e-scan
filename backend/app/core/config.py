@@ -9,12 +9,16 @@ class Settings(BaseSettings):
     APP_VERSION: str = "3.1.0"
     APP_ENV: str = "development"
     DEBUG: bool = True
+    BASE_DIR: Path = BASE_DIR
     
     # Database
     DATABASE_URL: str = os.getenv(
         "DATABASE_URL",
         "postgresql://dev_admin:it240@10.200.11.2:5432/yanhee_escan_db"
     )
+    
+    # Vendor Integration API Security
+    VENDOR_API_KEY: str = os.getenv("VENDOR_API_KEY", "yanhee-dms-vendor-sec-key-2026")
     
     # Storage
     STORAGE_DIR: Path = BASE_DIR / "storage" / "documents"

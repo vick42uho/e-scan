@@ -1,5 +1,7 @@
-from typing import Optional, List, Dict
-from sqlalchemy.orm import Session
+from typing import Optional, List, Dict, Tuple, Any
+from datetime import datetime, date
+from zoneinfo import ZoneInfo
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import or_, and_
 from app.models.document import Document, DocumentCategory, DocumentPage
 from app.models.patient import Encounter
@@ -9,6 +11,28 @@ from app.schemas.document import (
     DocumentTreeNode,
     DocumentTreeResponse
 )
+
+def get_doc_visit_date_info(doc: Document) -> Tuple[Optional[date], str]:
+    """
+    Returns (sortable_date, date_display_string):
+    1. If document has encounter with visit_date, use Encounter.visit_date (Official clinical visit date)
+    2. Fallback to scan_date converted to Bangkok timezone
+    3. If neither, return (None, 'ไม่ระบุวันที่')
+    """
+    if doc.encounter and doc.encounter.visit_date:
+        d = doc.encounter.visit_date
+        return d, d.strftime("%d-%m-%Y")
+    
+    if doc.scan_date:
+        try:
+            bkk_dt = doc.scan_date.replace(tzinfo=ZoneInfo("UTC")).astimezone(ZoneInfo("Asia/Bangkok"))
+            d = bkk_dt.date()
+            return d, d.strftime("%d-%m-%Y")
+        except Exception:
+            d = doc.scan_date.date()
+            return d, d.strftime("%d-%m-%Y")
+            
+    return None, "ไม่ระบุวันที่"
 
 class DocumentService:
     @staticmethod
@@ -124,19 +148,39 @@ class DocumentService:
                 )
             )
 
-        docs = db_query.order_by(Document.scan_date.desc()).all()
+        docs = (
+            db_query
+            .options(joinedload(Document.encounter), joinedload(Document.category))
+            .order_by(Document.scan_date.desc())
+            .all()
+        )
         nodes: List[DocumentTreeNode] = []
 
         # -------------------------------------------------------------
-        # Mode 1: Group by Visit Date
+        # Mode 1: Group by Visit Date (Clinical Encounter Date First)
         # -------------------------------------------------------------
         if group_by == "visit_date":
-            date_groups: Dict[str, List[Document]] = {}
+            date_groups: Dict[str, Dict[str, Any]] = {}
             for doc in docs:
-                date_key = doc.scan_date.strftime("%d-%m-%Y") if doc.scan_date else "ไม่ระบุวันที่"
-                date_groups.setdefault(date_key, []).append(doc)
+                sort_d, d_str = get_doc_visit_date_info(doc)
+                if d_str not in date_groups:
+                    date_groups[d_str] = {
+                        "sort_date": sort_d or date(1970, 1, 1),
+                        "date_str": d_str,
+                        "docs": []
+                    }
+                date_groups[d_str]["docs"].append(doc)
 
-            for d_str, doc_list in date_groups.items():
+            # Sort groups by clinical visit date descending (Newest visits first)
+            sorted_groups = sorted(
+                date_groups.values(),
+                key=lambda g: g["sort_date"],
+                reverse=True
+            )
+
+            for g in sorted_groups:
+                d_str = g["date_str"]
+                doc_list = g["docs"]
                 child_nodes = [
                     DocumentTreeNode(
                         id=f"doc_{d.id}",
@@ -168,19 +212,36 @@ class DocumentService:
         # -------------------------------------------------------------
         elif group_by == "caregiver":
             # Level 1: Caregiver Name (Strictly Attending Physicians / Doctors)
-            care_groups: Dict[str, Dict[str, List[Document]]] = {}
+            care_groups: Dict[str, Dict[str, Dict[str, Any]]] = {}
             for doc in docs:
                 if not doc.doctor_name or not doc.doctor_name.strip():
                     continue
                 giver_name = doc.doctor_name.strip()
-                date_key = doc.scan_date.strftime("%d-%m-%Y") if doc.scan_date else "ไม่ระบุวันที่"
-                care_groups.setdefault(giver_name, {}).setdefault(date_key, []).append(doc)
+                sort_d, d_str = get_doc_visit_date_info(doc)
+                
+                if giver_name not in care_groups:
+                    care_groups[giver_name] = {}
+                if d_str not in care_groups[giver_name]:
+                    care_groups[giver_name][d_str] = {
+                        "sort_date": sort_d or date(1970, 1, 1),
+                        "date_str": d_str,
+                        "docs": []
+                    }
+                care_groups[giver_name][d_str]["docs"].append(doc)
 
             for giver_name, dates_dict in care_groups.items():
                 date_subnodes = []
                 total_giver_docs = 0
 
-                for d_str, doc_list in dates_dict.items():
+                sorted_giver_dates = sorted(
+                    dates_dict.values(),
+                    key=lambda g: g["sort_date"],
+                    reverse=True
+                )
+
+                for g in sorted_giver_dates:
+                    d_str = g["date_str"]
+                    doc_list = g["docs"]
                     total_giver_docs += len(doc_list)
                     doc_subnodes = [
                         DocumentTreeNode(
@@ -222,17 +283,34 @@ class DocumentService:
         # Mode 3: Group by Category -> Subgroup by Visit Date!
         # -------------------------------------------------------------
         elif group_by == "category":
-            cat_groups: Dict[str, Dict[str, List[Document]]] = {}
+            cat_groups: Dict[str, Dict[str, Dict[str, Any]]] = {}
             for doc in docs:
                 cat_name = doc.category.name_th if doc.category else "ทั่วไป"
-                date_key = doc.scan_date.strftime("%d-%m-%Y") if doc.scan_date else "ไม่ระบุวันที่"
-                cat_groups.setdefault(cat_name, {}).setdefault(date_key, []).append(doc)
+                sort_d, d_str = get_doc_visit_date_info(doc)
+
+                if cat_name not in cat_groups:
+                    cat_groups[cat_name] = {}
+                if d_str not in cat_groups[cat_name]:
+                    cat_groups[cat_name][d_str] = {
+                        "sort_date": sort_d or date(1970, 1, 1),
+                        "date_str": d_str,
+                        "docs": []
+                    }
+                cat_groups[cat_name][d_str]["docs"].append(doc)
 
             for cat_name, dates_dict in cat_groups.items():
                 date_subnodes = []
                 total_cat_docs = 0
 
-                for d_str, doc_list in dates_dict.items():
+                sorted_cat_dates = sorted(
+                    dates_dict.values(),
+                    key=lambda g: g["sort_date"],
+                    reverse=True
+                )
+
+                for g in sorted_cat_dates:
+                    d_str = g["date_str"]
+                    doc_list = g["docs"]
                     total_cat_docs += len(doc_list)
                     doc_subnodes = [
                         DocumentTreeNode(

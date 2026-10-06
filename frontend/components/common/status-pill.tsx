@@ -1,4 +1,5 @@
 import React from "react";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 interface StatusPillProps {
@@ -24,20 +25,21 @@ export function StatusPill({
   };
 
   const sizeStyles = {
-    sm: "px-2 py-0.5 text-[10px]",
-    md: "px-2.5 py-1 text-xs",
+    sm: "px-2 py-0.5 text-[10px] h-auto",
+    md: "px-2.5 py-1 text-xs h-auto",
   };
 
   return (
-    <span
+    <Badge
+      variant="outline"
       className={cn(
-        "inline-flex items-center font-medium rounded-full border shadow-2xs whitespace-nowrap",
+        "font-medium rounded-full shadow-2xs whitespace-nowrap",
         variantStyles[variant],
         sizeStyles[size],
         className
       )}
     >
       {label}
-    </span>
+    </Badge>
   );
 }

@@ -9,6 +9,13 @@ import { LoadingSkeleton } from "@/components/common/loading-skeleton";
 import { EmptyState } from "@/components/common/empty-state";
 import { Loader2, AlertCircle, RotateCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 
 interface DocumentViewerCanvasProps {
   document: DocumentItem | null;
@@ -213,40 +220,44 @@ export function DocumentViewerCanvas({
       {/* Loading Spinner Indicator */}
       {imgLoading && !hasError && (
         <div className="absolute inset-0 flex items-center justify-center z-20 pointer-events-none">
-          <div className="flex flex-col items-center gap-2 bg-white/90 dark:bg-slate-900/90 px-4 py-3 rounded-xl shadow-lg border border-slate-200/80 dark:border-slate-800 backdrop-blur-xs">
+          <Card className="flex flex-col items-center gap-2 bg-white/95 dark:bg-slate-900/95 px-4 py-3 rounded-xl shadow-lg border border-slate-200/80 dark:border-slate-800 backdrop-blur-xs">
             <Loader2 className="h-6 w-6 text-blue-600 animate-spin" />
             <span className="text-xs text-slate-600 dark:text-slate-300 font-medium">
               กำลังโหลดเอกสาร...
             </span>
-          </div>
+          </Card>
         </div>
       )}
 
       {/* Error Fallback */}
       {hasError && (
         <div className="absolute inset-0 flex flex-col items-center justify-center z-20 bg-slate-100/90 dark:bg-slate-950/90 p-4 text-center">
-          <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-xl border border-rose-200 dark:border-rose-900/50 max-w-sm flex flex-col items-center">
-            <AlertCircle className="h-10 w-10 text-rose-500 mb-2.5" />
-            <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">
-              ไม่สามารถแสดงผลเอกสารหน้านี้ได้
-            </p>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 mb-4">
-              เกิดข้อผิดพลาดในการโหลดรูปภาพ หรือการเชื่อมต่อเครือข่าย
-            </p>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => {
-                setHasError(false);
-                setImgLoading(true);
-                setRetryKey((k) => k + 1);
-              }}
-              className="text-xs gap-1.5"
-            >
-              <RotateCw className="h-3.5 w-3.5" />
-              ลองใหม่อีกครั้ง
-            </Button>
-          </div>
+          <Card className="bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-xl border border-rose-200 dark:border-rose-900/50 max-w-sm flex flex-col items-center">
+            <CardHeader className="p-0 flex flex-col items-center">
+              <AlertCircle className="h-10 w-10 text-rose-500 mb-2.5" />
+              <CardTitle className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+                ไม่สามารถแสดงผลเอกสารหน้านี้ได้
+              </CardTitle>
+              <CardDescription className="text-xs text-slate-500 dark:text-slate-400 mt-1 mb-4 text-center">
+                เกิดข้อผิดพลาดในการโหลดรูปภาพ หรือการเชื่อมต่อเครือข่าย
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-0">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setHasError(false);
+                  setImgLoading(true);
+                  setRetryKey((k) => k + 1);
+                }}
+                className="text-xs gap-1.5"
+              >
+                <RotateCw className="h-3.5 w-3.5" />
+                ลองใหม่อีกครั้ง
+              </Button>
+            </CardContent>
+          </Card>
         </div>
       )}
 

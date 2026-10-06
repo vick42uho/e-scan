@@ -9,6 +9,7 @@ from PIL import Image
 
 from app.models.document import DocumentPage, Document
 from app.core.config import settings
+from app.core.storage import resolve_storage_path
 from app.utils.watermark import apply_image_watermark
 
 class FileService:
@@ -36,13 +37,8 @@ class FileService:
         if not page:
             raise HTTPException(status_code=404, detail="Document page not found")
 
-        file_path = Path(page.file_path)
-        if not file_path.is_absolute() or not file_path.exists():
-            alt_path = settings.STORAGE_DIR / page.file_name
-            if alt_path.exists():
-                file_path = alt_path
-
-        if not file_path.exists():
+        file_path = resolve_storage_path(page.file_path, page.file_name)
+        if not file_path:
             raise HTTPException(status_code=404, detail="File not found on storage")
 
         with open(file_path, "rb") as f:
@@ -121,13 +117,8 @@ class FileService:
                 return Response(content=f.read(), media_type="image/jpeg")
 
         # สร้าง thumbnail จากไฟล์หลัก
-        file_path = Path(page.file_path)
-        if not file_path.is_absolute() or not file_path.exists():
-            alt_path = settings.STORAGE_DIR / page.file_name
-            if alt_path.exists():
-                file_path = alt_path
-
-        if not file_path.exists():
+        file_path = resolve_storage_path(page.file_path, page.file_name)
+        if not file_path:
             raise HTTPException(status_code=404, detail="Source image not found")
 
         is_pdf = file_path.suffix.lower() == ".pdf" or (page.mime_type and page.mime_type == "application/pdf")
@@ -182,13 +173,8 @@ class FileService:
         if not page:
             raise HTTPException(status_code=404, detail="Document not found")
 
-        file_path = Path(page.file_path)
-        if not file_path.is_absolute() or not file_path.exists():
-            alt_path = settings.STORAGE_DIR / page.file_name
-            if alt_path.exists():
-                file_path = alt_path
-
-        if not file_path.exists():
+        file_path = resolve_storage_path(page.file_path, page.file_name)
+        if not file_path:
             raise HTTPException(status_code=404, detail="File not found on storage")
 
         with open(file_path, "rb") as f:

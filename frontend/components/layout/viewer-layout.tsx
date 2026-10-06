@@ -9,6 +9,12 @@ import { ViewerToolbar } from "@/components/viewer/viewer-toolbar";
 import { ThumbnailStrip } from "@/components/viewer/thumbnail-strip";
 import { PrintDialog } from "@/components/viewer/print-dialog";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { Badge } from "@/components/ui/badge";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -99,7 +105,7 @@ export function ViewerLayout({
         <div
           className={cn(
             "transition-all duration-300 ease-in-out shrink-0 overflow-hidden hidden md:flex h-full relative z-10",
-            leftSidebarOpen ? "w-72 md:w-80 opacity-100" : "w-0 opacity-0 border-r-0"
+            leftSidebarOpen ? "w-80 lg:w-[340px] opacity-100" : "w-0 opacity-0 border-r-0"
           )}
         >
           <EscanSidebar
@@ -120,28 +126,34 @@ export function ViewerLayout({
             onChangeEncounterType={onChangeEncounterType}
             onChangeSearchQuery={onChangeSearchQuery}
             onToggleDoctorOnly={onToggleDoctorOnly}
-            className="w-72 md:w-80 h-full border-r border-slate-200 dark:border-slate-800"
+            className="w-full h-full border-r border-slate-200 dark:border-slate-800"
           />
         </div>
 
         {/* Floating Restore Button for Left Sidebar when collapsed (Desktop only) */}
         {!leftSidebarOpen && (
-          <button
-            type="button"
-            onClick={onToggleLeftSidebar}
-            className="hidden md:flex absolute left-0 top-1/2 -translate-y-1/2 z-30 bg-white/95 dark:bg-slate-900/95 hover:bg-blue-50 dark:hover:bg-slate-800 text-slate-600 hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-400 border border-slate-300 dark:border-slate-700 border-l-0 rounded-r-lg py-3 px-1 shadow-md transition-all group flex-col items-center gap-1 cursor-pointer"
-            title="เปิดแถบประวัติเวชระเบียน ( [ )"
-          >
-            <ChevronRight className="h-4 w-4 text-blue-600 group-hover:translate-x-0.5 transition-transform" />
-            <span className="[writing-mode:vertical-rl] text-[10px] font-medium tracking-wider text-slate-500 dark:text-slate-400 group-hover:text-blue-600">
-              เปิดเมนู
-            </span>
-          </button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                onClick={onToggleLeftSidebar}
+                className="hidden md:flex absolute left-0 top-1/2 -translate-y-1/2 z-30 bg-white/95 dark:bg-slate-900/95 hover:bg-blue-50 dark:hover:bg-slate-800 text-slate-600 hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-400 border border-slate-300 dark:border-slate-700 border-l-0 rounded-r-lg py-3 px-1 shadow-md transition-all group flex-col items-center gap-1 cursor-pointer"
+              >
+                <ChevronRight className="h-4 w-4 text-blue-600 group-hover:translate-x-0.5 transition-transform" />
+                <span className="[writing-mode:vertical-rl] text-[10px] font-medium tracking-wider text-slate-500 dark:text-slate-400 group-hover:text-blue-600">
+                  เปิดเมนู
+                </span>
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="right">
+              เปิดแถบประวัติเวชระเบียน ( [ )
+            </TooltipContent>
+          </Tooltip>
         )}
 
         {/* Mobile Slide-over Drawer for Patient History & Docs */}
         <Sheet open={mobileDrawerOpen} onOpenChange={setMobileDrawerOpen}>
-          <SheetContent side="left" className="p-0 w-80 max-w-full">
+          <SheetContent side="left" className="p-0 w-80 sm:w-[340px] max-w-full">
             <SheetTitle className="sr-only">เมนูประวัติและเอกสาร</SheetTitle>
             <EscanSidebar
               patient={patient}
@@ -204,31 +216,37 @@ export function ViewerLayout({
           <div
             className={cn(
               "transition-all duration-300 ease-in-out shrink-0 overflow-hidden h-full relative z-10 hidden md:flex",
-              rightSidebarOpen ? "w-40 sm:w-44 opacity-100" : "w-0 opacity-0 border-l-0"
+              rightSidebarOpen ? "w-48 sm:w-52 md:w-56 opacity-100" : "w-0 opacity-0 border-l-0"
             )}
           >
             <ThumbnailStrip
               pages={currentDocument.pages}
               currentPage={viewerState.currentPage}
               onSelectPage={viewerControls.setPage}
-              className="w-40 sm:w-44 h-full"
+              className="w-full h-full"
             />
           </div>
         )}
 
         {/* Floating Restore Button for Right Sidebar when collapsed (Desktop only) */}
         {!rightSidebarOpen && currentDocument && currentDocument.pages.length > 1 && (
-          <button
-            type="button"
-            onClick={onToggleRightSidebar}
-            className="hidden md:flex absolute right-0 top-1/2 -translate-y-1/2 z-30 bg-white/95 dark:bg-slate-900/95 hover:bg-blue-50 dark:hover:bg-slate-800 text-slate-600 hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-400 border border-slate-300 dark:border-slate-700 border-r-0 rounded-l-lg py-3 px-1 shadow-md transition-all group flex-col items-center gap-1 cursor-pointer"
-            title="เปิดแถบหน้ารวมเอกสาร ( ] )"
-          >
-            <ChevronLeft className="h-4 w-4 text-blue-600 group-hover:-translate-x-0.5 transition-transform" />
-            <span className="[writing-mode:vertical-rl] text-[10px] font-medium tracking-wider text-slate-500 dark:text-slate-400 group-hover:text-blue-600">
-              หน้ารวม ({currentDocument.pages.length})
-            </span>
-          </button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                onClick={onToggleRightSidebar}
+                className="hidden md:flex absolute right-0 top-1/2 -translate-y-1/2 z-30 bg-white/95 dark:bg-slate-900/95 hover:bg-blue-50 dark:hover:bg-slate-800 text-slate-600 hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-400 border border-slate-300 dark:border-slate-700 border-r-0 rounded-l-lg py-3 px-1 shadow-md transition-all group flex-col items-center gap-1 cursor-pointer"
+              >
+                <ChevronLeft className="h-4 w-4 text-blue-600 group-hover:-translate-x-0.5 transition-transform" />
+                <span className="[writing-mode:vertical-rl] text-[10px] font-medium tracking-wider text-slate-500 dark:text-slate-400 group-hover:text-blue-600">
+                  หน้ารวม ({currentDocument.pages.length})
+                </span>
+              </button>
+            </TooltipTrigger>
+            <TooltipContent side="left">
+              เปิดแถบหน้ารวมเอกสาร ( ] )
+            </TooltipContent>
+          </Tooltip>
         )}
 
         {/* Mobile Slide-over Drawer for Thumbnails (Overlay - does not squeeze the canvas) */}

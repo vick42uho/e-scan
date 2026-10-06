@@ -8,7 +8,9 @@ description: >-
   ("สำเนาถูกต้อง COPY"), zoom/pan/rotate/color filters canvas, zero-disk PDF direct streaming (PyMuPDF),
   right-hand thumbnail strip, in-chart document search, doctor attribution de-duplication, multi-level patient document tree
   (Visit Date with OPD/IPD/O+I, Care provider, Doc Type), database schema (patients, encounters, documents, pages, audit_logs),
-  and strict modular component-driven frontend architecture.
+  Radix ScrollArea table-expansion containment ([&>div]:!block), high-contrast scrollbars (type="always"),
+  single-row document tree truncation (...), zero-native-tooltip anti-stacking, comprehensive mobile/tablet responsiveness,
+  slide-over sheets (left tree & right thumbnails), touch gestures (swipe flip, double-tap zoom), and strict modular component architecture.
 ---
 
 # Yanhee Hospital e-Scan System (DMS) v3.1 — Knowledge Base & Architecture Blueprint
@@ -28,24 +30,26 @@ The **Yanhee e-Scan System (DMS)** is the mission-critical hospital document man
 |                                Next.js 16 App Router Frontend (Port 3000)                         |
 |   - Stack: Next.js 16 (Turbopack), React 19, TypeScript, Tailwind CSS, shadcn/ui (Radix)         |
 |   - Left: EscanSidebar (sidebar-10 pattern):                                                      |
-|     * PatientProfileCard: Clean patient demographics (Name TH/EN, HN, VN/EN, Gender, Age, Thai DOB)|
+|     * PatientProfileCard: Ultra-compact demographics (Name TH/EN, HN, Gender, Age, Thai DOB - NO VN)|
 |     * DocumentSearchInput: Live in-chart search (by document name, code, doctor, category)        |
 |     * DocumentGroupFilter: Sleek single-line segmented control:                                   |
 |       - Visit Date (with natural inline sub-filter: ประเภทคนไข้: [ OPD | IPD | O+I ])               |
-|       - Care provider (Physician / Caregiver grouping)                                            |
+|       - Care provider (Physician / Caregiver grouping - Doctors only)                             |
 |       - Doc Type (Document category grouping)                                                     |
-|     * DocumentTreeView: Multi-level collapsible tree with [แพทย์] / [ทั่วไป] badges & page counts |
+|     * DocumentTreeView: 1-row truncated items (...), Radix Viewport contained, [แพทย์] / [Xน.]    |
 |   - Center: DocumentViewerCanvas - Interactive Canvas (Zoom 20%-400%, Pan, Rotate 90°, Filters)   |
 |   - Dynamic Watermark: SVG/Canvas overlay with "สำเนาถูกต้อง COPY", Staff ID, Date/Time Stamp    |
 |   - Collapsible Sidebars: 1-click fold/expand for Left Tree (key: `[`) & Right Thumbnails (key: `]`)|
 |     * Floating Edge Tab Handles (`เปิดเมนู` / `หน้ารวม`) for instant restoration on hover/click   |
 |   - Mobile Responsiveness & Touch Architecture:                                                   |
-|     * Canvas expands to 100% full width on mobile (`max-w-[96vw]`) for maximum reading area        |
+|     * Canvas expands to 100% full width on mobile (`max-w-[100vw]`) for maximum reading area     |
+|     * Left tree sidebar adapts to an overlay Slide-over Sheet (`Sheet side="left"`) via Hamburger  |
 |     * Right thumbnail strip adapts to an overlay Slide-over Sheet (`Sheet side="right"`) on mobile|
 |     * Always-visible compact page switcher `< 1 / 2 >` in mobile toolbar for quick 1-tap navigation|
 |     * Native Touch Gestures: 1-finger touch pan, horizontal swipe for Prev/Next, double-tap zoom   |
-|   - Right: ThumbnailStrip - Multi-page vertical navigation with active A4 card preview            |
-|   - Top: TopNavbar - Yanhee branding ("v3.1 Secured"), online status badge, fullscreen toggle     |
+|     * Mobile Toolbar single-row layout with `overflow-x-auto no-scrollbar`                        |
+|   - Right: ThumbnailStrip - Desktop width 192-224px (w-48 sm:w-52 md:w-56) with active A4 card   |
+|   - Top: TopNavbar - Yanhee branding ("Yanhee e-Scan v3.1"), online status badge, fullscreen      |
 |   - Dialogs: PrintDialog - Secured print workflow with mandatory audit logging                    |
 +-------------------------------------------------+-------------------------------------------------+
                                                   | REST APIs (/api/v1/*)
@@ -78,19 +82,30 @@ The **Yanhee e-Scan System (DMS)** is the mission-critical hospital document man
 Hospital clinicians, nurses, and medical record officers require an uncluttered, high-density, and ergonomically sound interface. The following strict UI/UX rules are enforced across the codebase:
 
 ### 2.1 Zero Redundant Information (ป้องกันการแสดงข้อมูลซ้ำซ้อน)
+- **TopNavbar Branding**:
+  - Branding in TopNavbar is strictly: **"Yanhee e-Scan v3.1"** (clean, high contrast, uncluttered).
 - **TopNavbar vs. Left Sidebar Patient Banner**:
   - `PatientProfileCard` in the left sidebar already displays the patient's name, HN, age, gender, and DOB.
   - Therefore, `TopNavbar` **must NOT** duplicate the patient banner when the sidebar is open.
   - The patient banner in `TopNavbar` is conditionally rendered **only when `!isSidebarOpen`** (when the sidebar is collapsed to maximize reading area).
+  - On mobile screens (`< 640px`), the TopNavbar patient banner is hidden (`hidden sm:flex`) to preserve navbar space for essential controls.
 - **Physician vs. Scanner Attribution in ViewerHeader**:
   - In clinical records authored and scanned by the same physician (e.g. `doctor_name === scan_by_name`), **suppress the duplicate scanner badge**.
   - Show only `แพทย์: {doctor_name}`. Do NOT print the identical person's name twice side-by-side.
   - Only show `ผู้สแกน: {scan_by_name}` if the physical uploader is genuinely a different person (e.g. nurse, medical record staff).
-- **Clean Patient Demographics**:
-  - Do NOT clutter the sidebar patient card with superfluous badges (e.g. allergies, national ID card number, payment schemes).
-  - Keep the card strictly focused on essential medical identifiers: Avatar, Name (TH & EN), HN, Gender, Age, and Date of Birth in Thai Buddhist Era (`12 พ.ค. 2518`).
+- **Removal of Confidential / Secret Documents Badge**:
+  - Scanned charts in this DMS are all active medical records; the hospital does not classify them as "เอกสารลับ" (`[ความลับ]`).
+  - Completely remove `[ความลับ]` badges from `ViewerHeader` and all search filters to avoid UI distraction.
+- **Ultra-Compact Patient Profile Micro-Stack (`PatientProfileCard`)**:
+  - Total card height is strictly ~48px (compact single card).
+  - Proximity layout immediately adjacent to the 40px Patient Avatar:
+    * Row 1: Thai Name (`text-[13px] font-semibold text-slate-800 dark:text-slate-100 truncate`)
+    * Row 2: English Name (`text-[11px] text-muted-foreground truncate`)
+    * Row 3: HN badge (`bg-teal-50 text-teal-700 dark:bg-teal-950/60 dark:text-teal-300 font-mono text-[10px]`) + Demographic text (`{gender} • {age} • เกิด {dob_thai}`)
+  - **Strict Zero VN in UI**: VN (Visit Number) is completely removed from the UI. Reason: In hospital scanning / DMS, VN and Visit Date describe the exact same encounter; showing both confused clinicians and bloated UI space.
+  - **Zero Bulky Well Cards**: No separate multi-row demographic boxes that eat up vertical sidebar space.
 
-### 2.2 Gestalt Proximity & Layout Ergonomics (การจัดวางที่กระชับ ไม่ชิดขวา ไม่เกิดช่องว่างเคว้งคว้าง)
+### 2.2 Gestalt Proximity & Layout Ergonomics
 - **Sub-filters directly attached to labels**:
   - Never use `justify-between` blindly between a label and its button group if it creates a giant, disconnected void.
   - Example: `ประเภทคนไข้:` must be placed directly adjacent to `[ OPD | IPD | O+I ]` with `gap-2` (`flex items-center gap-2`), keeping them visually and cognitively grouped together.
@@ -106,6 +121,90 @@ Hospital clinicians, nurses, and medical record officers require an uncluttered,
 - Remove all dummy persona switcher dropdowns from the UI to ensure enterprise production readiness.
 - Internal fallback (`user = "Staff"`) handles watermark stamps and audit logs gracefully without URL pollution.
 
+### 2.4 Mandatory shadcn/ui Component Architecture
+- **Every UI/UX design workflow must execute**:
+  ```bash
+  bunx --bun skills add shadcn/ui
+  ```
+- **Strictly use pre-installed components at `frontend/components/ui/` (`@/components/ui/*`)**:
+  - No raw HTML controls (`<button>`, `<input>`, `<select>`, `<dialog>`, raw checkboxes, raw badges/spans) where shadcn components exist.
+  - If a needed component is missing from `frontend/components/ui/`, ask the user first or install it via `bunx --bun shadcn@latest add <component>` inside `frontend/`.
+- Maintain unified tokens (`bg-card`, `text-card-foreground`, `border-border`, `focus-visible:ring-1`).
+
+### 2.5 Radix ScrollArea Viewport Table-Expansion Rule (Critical Architectural Fix)
+- **The Issue**: Radix `ScrollAreaPrimitive.Viewport` internally injects a child container with inline styles:
+  ```html
+  <div style="min-width: 100%; display: table;">
+  ```
+- In flexbox/grid containers (such as the document tree sidebar), any unconstrained long title inside this `display: table` element forces the table width to expand to its `max-content` width (e.g., 550px for an 80-character title).
+- This produces 3 severe UI defects:
+  1. Leaf node button elements stretch hundreds of pixels outside the visible sidebar boundary.
+  2. Right-side badges (`[แพทย์]`, `[Xน.]`) get pushed off-screen.
+  3. Radix `<Tooltip>` anchors calculate coordinates based on the over-expanded 550px button bounding box, causing tooltips to float 200px+ to the right into the document canvas.
+- **Mandatory Solution**:
+  In `frontend/components/ui/scroll-area.tsx`, `ScrollAreaPrimitive.Viewport` must always include:
+  ```tsx
+  <ScrollAreaPrimitive.Viewport
+    className={cn(
+      "focus-visible:ring-ring/50 size-full rounded-[inherit] transition-[color,box-shadow] focus-visible:outline-1 focus-visible:ring-1",
+      "[&>div]:!block [&>div]:w-full [&>div]:max-w-full overflow-x-hidden",
+      className
+    )}
+  >
+  ```
+  This forces the internal table container to `display: block` with strict 100% width, eliminating unbounded horizontal expansion.
+
+### 2.6 Mandatory Scrollbar Visibility in Clinical Systems (`type="always"`)
+- By default, Radix ScrollArea uses `type="hover"`, which hides scrollbars until user mouseover.
+- In medical EMR / DMS interfaces, scrollbars provide vital visual orientation regarding record length and position. Clinicians must know immediately if a record has more pages or visits below the fold.
+- `ScrollArea` must default to `type="always"`:
+  ```tsx
+  <ScrollArea type="always" className="...">
+  ```
+- ScrollBar track must have a visible left border (`border-l border-slate-200/80 dark:border-slate-800`), and the thumb must have high contrast (`bg-slate-400/80 hover:bg-slate-500 dark:bg-slate-600 dark:hover:bg-slate-500`) with minimum thickness (`w-2.5`).
+
+### 2.7 Tooltip Anti-Stacking & Bounded Positioning Rule
+- **Zero Native `title="..."`**: Never attach HTML `title="..."` attributes to elements wrapped in Radix `<TooltipTrigger>`. Doing so causes both the native OS browser tooltip and the Radix tooltip to fire simultaneously ("tooltips ซ้อนกัน").
+- **Tooltip Geometry & Offsets**:
+  - Tooltips on document tree items must use `side="right"`, `sideOffset={6}`, and `align="center"`.
+  - Tooltip container must be strictly bounded: `max-w-[280px] text-xs px-2.5 py-1.5 break-words`.
+  - Tooltips should display only necessary descriptive information without repeating redundant badges already visible in the item.
+
+### 2.8 Document Tree Item Single-Row Truncation Standard
+- Document leaf items must be strictly 1 row (`h-7.5` / ~30px) with `truncate` (`...`) on the document title to prevent multi-line card bloat and preserve high information density.
+- Leaf node button standard:
+  ```tsx
+  <Button
+    variant={isSelected ? "secondary" : "ghost"}
+    size="sm"
+    className="w-full max-w-full box-border overflow-hidden h-7.5 px-2 justify-start font-normal text-left"
+  >
+    <div className="flex items-center gap-1.5 min-w-0 flex-1 overflow-hidden">
+      <FileText className="h-3.5 w-3.5 shrink-0 text-slate-500" />
+      <span className="text-[12px] truncate flex-1 min-w-0">
+        {doc.document_name}
+      </span>
+    </div>
+    <div className="flex items-center gap-1 shrink-0 ml-1.5">
+      <Badge className="shrink-0 text-[10px] px-1 py-0">{doc.category_name}</Badge>
+      <Badge variant="outline" className="shrink-0 text-[10px] px-1 py-0">{doc.page_count}น.</Badge>
+    </div>
+  </Button>
+  ```
+- Crucial flex constraints:
+  * `min-w-0 flex-1 overflow-hidden` on the label container.
+  * `truncate min-w-0 flex-1` on the text span.
+  * `shrink-0` on badges so they are never clipped or pushed out.
+
+### 2.9 Document Viewer Header Visual Hierarchy
+- The document title has primary visual hierarchy: container is `min-w-0 flex-1`, title text is `truncate flex-1 min-w-0`.
+- Secondary scanner details are deferred to ultra-wide screens (`hidden 2xl:flex items-center gap-1.5 text-xs text-muted-foreground`) to avoid crushing document titles on mobile, tablet, and standard clinical 1080p monitors.
+- Remove redundant `[ความลับ]` badges.
+
+### 2.10 Right Thumbnail Strip Ergonomics & Anti-Clipping
+- Desktop thumbnail strip width must be `w-48 sm:w-52 md:w-56` (192-224px).
+- Thumbnail cards must use `box-border overflow-hidden` and `ring-1` with proper padding (`p-2.5 pr-3.5`) so A4 preview cards, page numbers, titles, and vertical scrollbars are never clipped on the right edge.
+
 ---
 
 ## 3. Multi-Level Hierarchical Tree Structure
@@ -117,7 +216,7 @@ Hospital clinicians, nurses, and medical record officers require an uncluttered,
      * `IPD`: Filters encounters of type In-Patient (e.g. Surgery, Ward admission).
      * `O+I`: Shows all visits combined.
    - Level 1: `📅 วันที่ Visit` (sorted descending by latest visit date first, e.g. `28-02-2020`, `15-11-2019`, `24-06-2019`, `18-12-2018`, `10-08-2018`).
-   - Level 2: Document Leaf Nodes with `[แพทย์]` or `[ทั่วไป]` badges and page count pill (`Xน.`).
+   - Level 2: Document Leaf Nodes with `[แพทย์]` or `[ทั่วไป]` badges and page count pill (`Xน.`), single-row truncated with ellipsis (`...`).
 
 2. **`Care provider` (Grouping by Attending Physician / Caregiver)**:
    - **กฎการแสดงผล**: แสดงเฉพาะเอกสารที่มีแพทย์ผู้ตรวจรักษาเท่านั้น (`doctor_name` ไม่เป็นค่าว่าง) โดยเอกสารธุรการ/การเงินที่ไม่มีแพทย์จะถูกกรองออก ไม่นำชื่อเจ้าหน้าที่หรือการเงินมาแสดงในกลุ่มนี้
@@ -199,15 +298,234 @@ bun run dev --port 3000
 
 ---
 
-## 8. Mobile & Tablet Touch Ergonomics
+## 8. Comprehensive Mobile, Tablet & Touch Ergonomics
 
-1. **Full-Width Canvas (`hidden md:flex` on Right Thumbnail Column)**:
-   - On mobile viewports, the desktop thumbnail column is hidden, giving scanned charts 100% reading width (`max-w-[96vw]`).
-2. **Mobile Thumbnail Sheet**:
-   - Tapping "หน้ารวม" opens an overlay Slide-over Sheet (`side="right"`). Selecting a page navigates and auto-closes the sheet.
-3. **Smart Contextual Page Switcher `< 1 / 2 >`**:
-   - Always visible in mobile toolbar; automatically emerges on desktop when the right sidebar is collapsed.
-4. **Native Touch Gestures**:
-   - 1-finger touch pan (`touchAction: "none"`).
-   - Horizontal swipe for next/previous page flip (`dx < -50px`, `dt < 350ms`).
-   - Quick double-tap zoom between fit-to-screen and 100%.
+Hospital clinicians, mobile ward nurses, and rounding physicians frequently access e-Scan on smartphones (iPhone / Android) and mobile tablets (iPad / Samsung Tab). The system enforces a strict responsive and touch architecture:
+
+### 8.1 Breakpoint Taxonomy & Screen Size Classes
+| Device Class | Breakpoint | Layout Strategy |
+| :--- | :--- | :--- |
+| **Mobile Smartphone** | `< 768px` (`< md`) | 100% Canvas reading width; Left Sidebar & Right Thumbnails convert to Slide-over Sheets; Page switcher in Toolbar; Single-row scrollable toolbar |
+| **Tablet (Portrait / Landscape)** | `768px - 1024px` (`md` to `lg`) | Collapsible left sidebar (`w-80`); right thumbnail strip hidden or collapsible; Canvas `min-w-0 flex-1` |
+| **Desktop Workstation** | `≥ 1024px` (`lg`, `xl`, `2xl`) | Full 3-column view: Left Tree (`w-80` to `340px`), Center Canvas, Right Thumbnails (`w-48` to `56`) |
+
+### 8.2 Canvas Dominance: 100% Reading Area Guarantee
+- Scanned medical records (A4 physical charts, doctor handwriting, surgical forms) require maximum screen space.
+- **Strict Rule**: On mobile (`< 768px`), both the left document tree and the right thumbnail strip **must NEVER be rendered as persistent side columns**. Persistent columns squeeze the scanned chart into an unreadable sliver.
+- The canvas expands to **100% full viewport width** (`w-full min-w-0 max-w-[100vw]`).
+
+### 8.3 Slide-Over Sheets for Secondary Navigation (`@/components/ui/sheet`)
+- **Left Patient & Tree Drawer (`Sheet side="left"`)**:
+  * Triggered by the Hamburger Menu button (`<Menu className="h-5 w-5" />`) in `TopNavbar`.
+  * Dimensions: `w-80 sm:w-[340px] max-w-full p-0`.
+  * **Auto-Dismiss on Document Selection**: Tapping any document in the tree automatically triggers `setMobileDrawerOpen(false)` so the clinician immediately views the selected chart without manual drawer dismissal.
+- **Right Multi-Page Thumbnail Drawer (`Sheet side="right"`)**:
+  * For multi-page records (e.g. 3-page committee notes), tapping the toolbar button **`"หน้ารวม ({totalPages})"`** opens the drawer.
+  * Dimensions: `w-72 max-w-[85vw] p-0 flex flex-col`.
+  * **Auto-Dismiss on Page Selection**: Tapping a thumbnail navigates to that page and auto-closes the sheet (`setMobileThumbnailsOpen(false)`).
+
+### 8.4 Contextual Mobile Page Switcher `< 1 / 2 >` in Toolbar
+- Since the right thumbnail column is hidden on mobile, clinicians must NOT be forced to open a drawer just to flip between page 1 and page 2.
+- The compact page switcher `< 1 / 2 >` is **always visible in the mobile toolbar** (`flex md:hidden` when desktop sidebar is open, or `flex` when collapsed).
+- Provides instant 1-tap previous/next buttons directly above the chart.
+
+### 8.5 Single-Row Horizontal Scroll Toolbar (`overflow-x-auto no-scrollbar`)
+- To prevent toolbars from wrapping onto multiple rows and eating up vertical chart reading space on mobile, `ViewerToolbar` enforces:
+  ```tsx
+  <div className="h-10 sm:h-11 px-2 sm:px-3 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between shadow-2xs select-none overflow-x-auto no-scrollbar gap-1.5">
+  ```
+- All controls (Zoom, 1:1, Fit Screen, Rotate, Color Mode, Page Switcher, Thumbnails) stay on a clean single line.
+
+### 8.6 TopNavbar Mobile Adaptations
+- TopNavbar height is fixed at `h-14` (56px) for thumb ergonomics.
+- Hospital subtext ("โรงพยาบาลยันฮี • ระบบจัดเก็บ...") is hidden on `< 640px` (`hidden sm:block`) to avoid line wrapping.
+- Patient duplicate banner is hidden on `< 640px` (`hidden sm:flex`), as full patient info is accessible with 1 tap on the hamburger button.
+- Brand logo + **"Yanhee e-Scan v3.1"** remains bold, prominent, and legible.
+
+### 8.7 Native Touch & Ergonomic Gestures
+1. **1-Finger Touch Pan**:
+   - `touchAction: "none"` on the canvas enables effortless 1-finger panning of zoomed charts with natural inertia.
+2. **Horizontal Swipe Page Flip**:
+   - Quick horizontal swipe (`dx < -50px, dt < 350ms`) flips to the Next Page.
+   - Quick horizontal swipe (`dx > 50px, dt < 350ms`) flips to the Previous Page.
+3. **Double-Tap Zoom Toggle**:
+   - Quick double-tap switches smoothly between Fit-to-Screen and 100% actual size (`1:1`).
+4. **Touch Target Sizing**:
+   - All interactive touch buttons must provide a minimum visual or touch area of 36px-44px to accommodate gloved hands or ward rounds.
+
+---
+
+## 9. Document Scanning & Ingestion Standards (Scan Module)
+
+The Document Scanning & Ingestion module (`/scan`) is the physical-to-digital gateway for medical record officers and ward nurses:
+
+### 9.1 Brand TopBar Consistency & Hardware Scanner Selector
+- Matches the DMS hospital header theme (`bg-gradient-to-r from-blue-950 via-blue-900 to-indigo-950 text-white`).
+- Features the **YH Medical Emblem**, **"Yanhee e-Scan v3.1"** title, and an explicit **"สแกนเอกสาร"** badge.
+- Live Scanner Device selector with hardware connection status tooltips (`Wifi` / `WifiOff`) and a direct return link to `/view`.
+- **Hardware Disambiguation & Key Uniqueness**: Scanner Bridge filters out redundant eSCL virtual devices when native WIA drivers exist, preventing duplicate printer names. The frontend Combobox enforces unique keys using `dev.id` (`key={dev?.id || name}`) and unique display names, eliminating React key collisions.
+- **Visual Device Confirmation on Scan Button**: The main scan action button (`สแกนเอกสาร (Scanner)`) dynamically displays the currently selected hardware device name below the label (e.g. `เครื่อง: EPSON Perfection V39 #2`), giving clinicians immediate visual confirmation of which physical device will execute the scan.
+
+### 9.2 Strict Medical Form Architecture (`ScanForm`)
+- **Encounter Types**: Must offer **`[ OPD | IPD | O+I ]`** as an instant 1-tap segmented pill button group (`grid grid-cols-3 p-0.5 bg-slate-200/80 rounded-lg`).
+- **Strict Zero Confidential Level**: Hospital scanned charts have no confidential classification; do NOT include "ระดับความลับ" or confidential checkboxes in the UI.
+- **Doctor Attribution**: Dedicated section for attending physician (`แพทย์ผู้ตรวจรักษา`) with an optional checkbox `เป็นเอกสารบันทึกของแพทย์โดยตรง`.
+- **ScrollArea Containment**: Form content is wrapped in `<ScrollArea type="always">` with `[&>div]:!block [&>div]:w-full overflow-x-hidden`.
+
+### 9.3 Responsive Workspace Architecture
+- **Desktop (`≥ 768px`)**: 2-column layout (Left: Form `w-[380px] lg:w-[420px]`, Right: Preview Canvas).
+- **Mobile (`< 768px`)**: Single-column responsive layout featuring an accessible mobile tab switcher at the top:
+  * `[ 📝 ข้อมูล & สแกน | 📄 ตัวอย่าง ({pages.length}) ]`
+  * Automatically switches to the `preview` tab upon scanning or file upload so mobile users immediately review scanned charts.
+
+### 9.4 Strict File Extension Restriction
+- **Allowed Formats**: Strictly `.pdf`, `.jpg`, `.jpeg`, `.png`.
+- File input element must enforce `accept=".pdf,.png,.jpg,.jpeg"`.
+- Event handler `handleFileChange` must programmatically validate each selected file against allowed extensions and MIME types via `DataTransfer`, filtering out unsupported files (TIFF, BMP, WEBP, GIF, executables) and notifying the user.
+
+### 9.5 Mandatory Fields & Dynamic Age Calculation
+- **Patient Name**: Marked as mandatory with red asterisk `<span className="text-rose-500">*</span>` and validated on save.
+- **Dynamic Age from DOB**:
+  * Medical charts often specify DOB in Thai Buddhist Era (`15 พ.ค. 2535`, `15/05/2535`) or Gregorian Era (`1992-05-15`).
+  * Utilizes `calculateAgeFromDob(dob)`:
+    - Automatically converts Buddhist Era years (`> 2400`) to Gregorian by subtracting 543.
+    - Resolves Thai month abbreviations (`ม.ค.` to `ธ.ค.`).
+    - Calculates exact age in years/months against `new Date()`, ensuring age remains accurate and up-to-date with the current year.
+    - Automatically computes age when DOB is extracted via OCR or typed manually.
+
+### 9.6 Dynamic Document Categories & Searchable Combobox Selection
+- **Database Model**: `DocumentCategory` (`id`, `code`, `name_th`, `name_en`, `category_type`, `sort_order`).
+- **Backend API**: `POST /api/v1/scan/categories` takes `DocumentCategoryCreate` (`name_th`, `name_en`, `code`, `category_type`), auto-generates unique uppercase codes, and saves to database.
+- **Searchable Combobox Standard**: In accordance with project UX standards, document category selection, extraction mode, scanner device, and modal options utilize shadcn `<Combobox>` (`@/components/ui/combobox`) with searchable `<ComboboxInput>`, `<ComboboxContent>`, `<ComboboxList>`, and `<ComboboxEmpty>`.
+- **Frontend Dialog**: Accessible via `+ เพิ่มหมวดหมู่` button beside the category label, using shadcn/ui `<Dialog>`, `<Input>`, `<Label>`, and `<Combobox>`.
+- Automatically appends the new category to dropdown options and selects it immediately upon creation.
+
+### 9.7 Patient & Encounter Auto-Fill Lookup API
+- **Endpoint**: `GET /api/v1/scan/patient-lookup?query={hn_or_en}`
+- **Search Precedence**:
+  1. Checks `Encounter` table for exact VN/EN match.
+  2. If not found, checks `Patient` table by HN and fetches their latest encounter.
+- **Response**: Unified `PatientLookupResult` with `hn`, `name_th`, `name_en`, `gender`, `dob`, dynamic current `age`, `en`, `visit_date`, `encounter_type`, `department_name`, and `doctor_name`.
+- **UI Integration**: 1-click "ดึงข้อมูลอัตโนมัติ" button and Enter key trigger in both HN and VN inputs.
+
+---
+
+## 10. Secure Vendor Document Ingestion Architecture
+
+External hospital vendors (e.g., outsourced lab centers, imaging clinics, specialized pathology systems) must securely submit document metadata and digitized files directly into the DMS database.
+
+```
++---------------------------------------------------------------------------------------------------+
+|                                External Medical Vendor System                                     |
+|   - HTTP Multipart POST: /api/v1/scan/vendor-upload                                                |
+|   - Header: X-API-Key: {SECURE_VENDOR_API_KEY}                                                    |
+|   - Payload: file (.pdf/.jpg/.png) + metadata (hn, title, category_code, en, ref_id)              |
++-------------------------------------------------+-------------------------------------------------+
+                                                  |
+                                                  v
++---------------------------------------------------------------------------------------------------+
+|                                 6-Layer Security & Ingestion Shield                               |
++---------------------------------------------------------------------------------------------------+
+| 1. Authentication Layer: Verify Header 'X-API-Key' against settings.VENDOR_API_KEY                |
+| 2. Deep File Inspection (Magic Bytes):                                                            |
+|    - PDF: starts with b"%PDF-"                                                                    |
+|    - JPEG: starts with b"\xFF\xD8\xFF"                                                            |
+|    - PNG: starts with b"\x89PNG\r\n\x1a\n"                                                         |
+|    - Rejects polyglot / executable files disguising as images or PDFs                             |
+| 3. File Size & Quota: Hard ceiling of 50 MB per file (52,428,800 bytes)                           |
+| 4. Idempotency Protection: If external_reference_id exists, return existing record without dupes   |
+| 5. Storage Sanitization: Store file as VENDOR_{code}_{safe_hn}_{timestamp}_{doc_id[:8]}{ext}      |
+| 6. Audit Logging: Record VENDOR_UPLOAD in audit_logs with Vendor Name, IP, User Agent, & SHA-256 |
++-------------------------------------------------+-------------------------------------------------+
+                                                  |
+                                                  v
++---------------------------------------------------------------------------------------------------+
+|                             PostgreSQL Database & Storage Ingestion                               |
+|   - Upsert Patient (by HN) & Encounter (by EN)                                                    |
+|   - Save Document & DocumentPage records                                                          |
+|   - Log full compliance trace into audit_logs                                                     |
++---------------------------------------------------------------------------------------------------+
+```
+
+### Security Recommendations for Production Deployment:
+1. **API Key Rotation & Vendor Scoping**: Store unique per-vendor API keys in a database table (`api_credentials`) with hashed secrets (bcrypt/argon2), expiration dates, and assigned vendor permissions.
+2. **IP Whitelisting & Reverse Proxy**: In production Nginx/Caddy or Cloudflare WAF, whitelist the fixed public IPs or CIDR blocks of authorized vendors.
+3. **mTLS (Mutual TLS)**: For enterprise lab vendors exchanging high-volume sensitive clinical records, enable client certificate authentication (mTLS).
+4. **Rate Limiting**: Enforce a strict rate limit (e.g. 60 requests/minute per API key or IP) to prevent DoS attacks.
+5. **Antivirus & Malware Scanning**: Integrate an async worker (e.g., ClamAV daemon) to scan incoming files before making them accessible in clinical viewers.
+
+---
+
+## 11. Scanner Bridge & High-Performance Thai OCR Architecture
+
+### 11.1 Local Hardware Scanner Bridge (Port 18000)
+- **Technology**: Lightweight Python FastAPI daemon (`scanner-bridge/scan_bridge.py`) running on the client Windows machine.
+- **Windows WIA Integration**: Uses `win32com.client.Dispatch("WIA.DeviceManager")` to query and drive physical TWAIN/WIA flatbed and sheetfed document scanners (e.g. EPSON Perfection V39, Brother MFC-J2330DW).
+- **Device Disambiguation & Anti-Duplication**:
+  - Filters out redundant eSCL network endpoints when a native WIA driver exists for the same device name.
+  - Strict scanner target matching: matches by device ID, normalized backslash/slash path, and device name, ensuring the user's selected scanner in the DMS top bar is always used rather than the Windows system default printer/scanner.
+  - High-contrast dropdown styles (`data-highlighted:bg-blue-600 data-highlighted:text-white`) prevent unreadable black-on-black hover states in Radix Combobox.
+
+### 11.2 High-Performance Thai OCR Engine
+- **Engine**: PaddleOCR Thai ONNX Recognition Model (`backend/models/ocr/thai/rec.onnx` + `dict.txt`) loaded via `RapidOCR`.
+- **Auto-Orientation Detection**:
+  - Flatbed scanners (e.g. EPSON V39) scan documents in landscape orientation (270° relative to upright portrait).
+  - Evaluates rotation candidates (0°, 270°, 90°, 180°) dynamically based on Thai character density and length (`score = thai_chars * 3 + text_length`).
+  - Automatically selects the upright orientation without manual operator intervention.
+
+### 11.3 Thai Clinical Slip Metadata Extraction & Normalization
+- **Thai Patient Name**:
+  - Regex detects standard Thai honorifics and prefixes: `น.ส.`, `นางสาว`, `นาย`, `นาง`, `ด.ช.`, `ด.ญ.`, `คุณ`.
+  - Normalizes common OCR artifacts: `U.a.`, `u.a.`, `น.a.` -> `น.ส.`.
+  - Prioritizes Thai name (`name_th`) over English name (`name_en`) on Thai hospital forms.
+- **Patient Age**:
+  - Normalizes Thai age indicators: `อายุ: 24 ปี`, `อาย: 24 ป`, `24 ปี`.
+  - Dynamically calculates age from DOB and the current year to ensure age remains perpetually up-to-date.
+- **Date of Birth (DOB)**:
+  - Normalizes OCR Thai month abbreviations: `เม.0.` / `เม.1.` -> `เม.ย.`, `ม.n.` -> `ม.ค.`, `ก.w.` -> `ก.พ.`.
+  - Formats date into standard Thai Buddhist Era (BE) string (e.g. `03 เม.ย. 2545`) and CE date (`2002-04-03`).
+- **Doctor Name**:
+  - Matches hospital doctor patterns: `DOCTOR YANHEE`, department + doctor lines (`อายุรกรรม , DOCTOR YANHEE , Cath Lab`), `นพ.`, `พญ.`, `Dr.`, `แพทย์`.
+- **Database Enrichment**:
+  - Matches detected HN (or barcode) against the database and enriches with registered official Thai names and latest encounter info.
+
+### 11.4 Clinical Significance of `is_doctor_document` Checkbox
+- **Hospital Regulatory Standard (HA / JCI)**:
+  - **Direct Physician Charting (`is_doctor_document = true`)**: Clinical Progress Notes, Doctor's Orders, Operative Notes, Discharge Summaries authored directly by physicians.
+  - **Auxiliary Records with Doctor Attribution (`is_doctor_document = false`)**: Visit Slips, Lab Slips, X-Ray Requests, Financial Billing Sheets printed by nurses or front-desk staff containing the ordering doctor's name.
+- **System Automation**: The system auto-checks this flag whenever a doctor's name is detected or selected, while providing clinical clerks the flexibility to toggle it based on document nature.
+
+### 11.5 Multi-Field Key-Value Barcode / QR Code Parsing & Auto-Population
+- **Payload Structure**:
+  Hospital clinical forms may print structured QR codes or 2D barcodes containing pipe-delimited Key=Value pairs:
+  `HN=00000001|VN=OP26070000001|Doctype=OPD-NOTE|DOB=2006-01-08 17:00:00.000`
+- **Dual-Engine Auto-Population (Frontend + Backend)**:
+  1. **HN**: Normalizes patient hospital number (handles leading zeros, e.g. `00000001` or `000000001`) and populates the HN form field.
+  2. **VN / EN**: Populates encounter number (`OP26070000001`) and auto-switches encounter type Segmented Pill to `OPD` (for `OP`/`VN`) or `IPD` (for `IP`).
+  3. **Doctype**: Matches `OPD-NOTE` against `document_categories` by `code`, `category_type`, `name_en`, or `name_th`. Automatically sets `category_id` in the Combobox, updates `category_name`, and fills document `title` (e.g. `บันทึกการตรวจรักษาผู้ป่วยนอก`).
+  4. **DOB & Dynamic Age**: Cleans timestamp (`17:00:00.000`), formats date (`2006-01-08`), and computes current age (e.g. `20 ปี`) dynamically relative to the current year.
+  5. **Instant Patient Enrichment**: Queries database by HN or VN to automatically enrich patient Thai name, gender, and attending physician (`นพ. สุทธิพร จุลกะ`).
+
+### 11.6 Grouped Dual-Language Category Combobox & Dynamic Category Types
+- **Dual-Language Formatting**: If both Thai and English names are present and distinct, formats as `ชื่อไทย (English Name)`. If only one language is available, displays that language directly.
+- **ComboboxGroup & ComboboxSeparator Ergonomics**: Categories are grouped by `category_type` (e.g. `Core Clinical Documents`, `Assessment`, `Orders / Treatment`, `Procedure / Operation`, `Consent`, `Medication-related`, `Nursing / Care Plan`, `Investigation / Diagnostic`, `Administration`). Uses inline group headers (non-sticky to avoid header collision when scrolling to the bottom) and clean separators between groups.
+- **showClear & Clean Document Replacement**: Both main form and dialog Combobox inputs feature `showClear` for 1-click clearing. When uploading a new document or clicking the preview "ล้างเอกสาร" button, all previous patient metadata and form states are completely reset to prevent stale data cross-contamination.
+- **Dialog Combobox Scrolling & Dismissal Shield (`container={dialogRef}`)**:
+  - In Radix Dialogs, `ComboboxContent` accepts `container={dialogRef}`, portalling the dropdown popup directly inside `<DialogContent ref={dialogRef}>`. This keeps the DOM tree contained within the dialog, allowing `react-remove-scroll` to recognize mouse wheel events and scroll smoothly at 60 FPS without being blocked.
+  - `DialogContent` implements an outside interaction shield (`onPointerDownOutside` and `onInteractOutside`) checking `e.detail.originalEvent.target?.closest('[data-slot*="combobox"]')`. This ensures clicking on Combobox items or scrollbars never causes Radix Dialog to dismiss unexpectedly.
+  - `data-remove-scroll-lock-ignore="true"` and `data-radix-scroll-lock-ignore="true"` are attached to `ComboboxPositioner`, `ComboboxPopup`, and `ComboboxList`.
+- **Dynamic Category Types in Creation Dialog**:
+  - `category_type` options are dynamically extracted from all existing records in `document_categories` via `useMemo` (zero hardcoding).
+  - Provides a toggle `+ พิมพ์ใหม่` / `← เลือกที่มีอยู่` allowing operators to either select from existing categories or enter a brand new custom category type without backend schema restrictions.
+  - Automatically refreshes the Category Combobox and selects the newly created category upon submission.
+
+### 11.7 Hospital-Grade Save Confirmation & Validation Feedback Dialog
+- **Pre-flight Validation Alert**: Before sending files, checks that `pages.length > 0`, `hn`, `patient_name`, `category_id`, and `title` are present. If anything is missing, immediately pops up a clear Amber Warning Dialog detailing the exact missing fields as bullet points, rather than a silent failure or clipped inline banner.
+- **Success Confirmation Modal**: On successful document upload:
+  - Displays a centered, prominent Emerald Success Dialog with `CheckCircle2` icon.
+  - Summarizes clinical document metadata: HN, Patient Name, Category Name, Title, Total Pages, and Document ID.
+  - Provides two distinct action buttons:
+    1. **"เปิดดูใน Viewer"**: Opens `/view?hn={hn}` in a new browser tab for immediate verification in the clinical E-Scan Viewer.
+    2. **"สแกน / นำเข้าเคสถัดไป"**: Automatically clears the form, frees document blob memory, and resets the interface ready for the next patient chart.
+- **Error Handling**: Extracts server JSON error details (`errorData.detail`) and presents actionable error messages directly to the operator in a Rose Error Dialog.
+

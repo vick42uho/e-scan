@@ -3,7 +3,9 @@
 import React, { useState } from "react";
 import { DocumentPage } from "@/types/document";
 import { cn } from "@/lib/utils";
-import { FileText, Image as ImageIcon, Loader2 } from "lucide-react";
+import { FileText, Image as ImageIcon } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 
 interface ThumbnailStripProps {
   pages: DocumentPage[];
@@ -32,9 +34,9 @@ function ThumbnailCard({
       type="button"
       onClick={onSelect}
       className={cn(
-        "w-full text-left rounded-xl transition-all p-2 flex flex-col items-center group relative border focus:outline-hidden",
+        "w-full max-w-full box-border text-left rounded-xl transition-all p-2 flex flex-col items-center group relative border focus:outline-hidden cursor-pointer",
         isActive
-          ? "bg-blue-50/90 dark:bg-blue-950/60 border-blue-500 ring-2 ring-blue-500/40 shadow-md"
+          ? "bg-blue-50/90 dark:bg-blue-950/60 border-blue-500 ring-1 ring-blue-500/50 shadow-md"
           : "bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800 hover:border-blue-400 hover:shadow-xs"
       )}
     >
@@ -77,16 +79,17 @@ function ThumbnailCard({
         )}
 
         {/* Page Badge In Top-Left */}
-        <div
+        <Badge
+          variant={isActive ? "default" : "secondary"}
           className={cn(
-            "absolute top-1.5 left-1.5 text-[10px] font-mono font-bold px-1.5 py-0.5 rounded shadow-sm transition-colors",
+            "absolute top-1.5 left-1.5 text-[10px] font-mono font-bold px-1.5 py-0 h-4 rounded shadow-sm border-0",
             isActive
               ? "bg-blue-600 text-white ring-1 ring-white/50"
               : "bg-slate-900/75 text-white backdrop-blur-[2px]"
           )}
         >
           {page.page_number}
-        </div>
+        </Badge>
       </div>
 
       {/* Page Title / Subtext */}
@@ -118,31 +121,39 @@ export function ThumbnailStrip({
   return (
     <aside
       className={cn(
-        "w-40 sm:w-44 bg-slate-50/95 dark:bg-slate-950 border-l border-slate-200 dark:border-slate-800 flex flex-col h-full shrink-0 select-none overflow-hidden shadow-xs",
+        "w-full bg-slate-50/95 dark:bg-slate-950 border-l border-slate-200 dark:border-slate-800 flex flex-col h-full select-none overflow-hidden shadow-xs",
         className
       )}
     >
       {/* Header */}
-      <div className="h-10 px-3 border-b border-slate-200 dark:border-slate-800 text-[11px] font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider flex items-center justify-between bg-slate-100/60 dark:bg-slate-900/60">
+      <div className="h-10 px-3 border-b border-slate-200 dark:border-slate-800 text-[11px] font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider flex items-center justify-between bg-slate-100/60 dark:bg-slate-900/60 shrink-0">
         <div className="flex items-center gap-1.5">
           <ImageIcon className="h-3.5 w-3.5 text-blue-600" />
           <span>หน้ารวม</span>
         </div>
-        <span className="text-[10px] bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 font-mono px-1.5 py-0.5 rounded font-bold">
+        <Badge
+          variant="secondary"
+          className="text-[10px] bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 font-mono px-1.5 py-0 h-4 border-0 font-bold"
+        >
           {pages.length} หน้า
-        </span>
+        </Badge>
       </div>
 
-      {/* Scrollable Thumbnails List */}
-      <div className="flex-1 overflow-y-auto p-2.5 space-y-2.5">
-        {pages.map((p) => (
-          <ThumbnailCard
-            key={`${p.document_id}-${p.page_number}`}
-            page={p}
-            isActive={p.page_number === currentPage}
-            onSelect={() => onSelectPage(p.page_number)}
-          />
-        ))}
+      {/* Scrollable Thumbnails List (Bounded Flex Container) */}
+      <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+        <ScrollArea className="h-full w-full">
+          <div className="p-2.5 pr-3.5 space-y-2.5 w-full box-border">
+            {pages.map((p) => (
+              <ThumbnailCard
+                key={`${p.document_id}-${p.page_number}`}
+                page={p}
+                isActive={p.page_number === currentPage}
+                onSelect={() => onSelectPage(p.page_number)}
+              />
+            ))}
+          </div>
+          <ScrollBar orientation="vertical" />
+        </ScrollArea>
       </div>
     </aside>
   );

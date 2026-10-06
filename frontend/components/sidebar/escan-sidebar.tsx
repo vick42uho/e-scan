@@ -57,13 +57,15 @@ export function EscanSidebar({
 }: EscanSidebarProps) {
   return (
     <aside
-      className={`w-72 md:w-80 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col h-full shrink-0 select-none overflow-hidden ${className}`}
+      className={`w-80 lg:w-[340px] bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex flex-col h-full shrink-0 select-none overflow-hidden ${className}`}
     >
-      {/* 1. Patient Profile Info */}
-      <PatientProfileCard patient={patient} vn={vn} />
+      {/* 1. Patient Profile Info (Ultra Compact) */}
+      <div className="shrink-0">
+        <PatientProfileCard patient={patient} />
+      </div>
 
       {/* 2. In-Chart Document Search Bar (ค้นหาเอกสารในเวชระเบียนนี้) */}
-      <div className="p-2 border-b border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900">
+      <div className="p-2 border-b border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900 shrink-0">
         <DocumentSearchInput
           value={searchQuery}
           onChange={onChangeSearchQuery}
@@ -73,20 +75,24 @@ export function EscanSidebar({
       </div>
 
       {/* 3. Group Filter (Visit Date / Care provider / Doc Type + OPD/IPD/O+I) */}
-      <DocumentGroupFilter
-        activeGroup={groupBy}
-        onChangeGroup={onChangeGroupBy}
-        encounterType={encounterType}
-        onChangeEncounterType={onChangeEncounterType}
-      />
+      <div className="shrink-0">
+        <DocumentGroupFilter
+          activeGroup={groupBy}
+          onChangeGroup={onChangeGroupBy}
+          encounterType={encounterType}
+          onChangeEncounterType={onChangeEncounterType}
+        />
+      </div>
 
-      {/* 5. Collapsible Multi-Level Document Tree */}
-      <DocumentTreeView
-        treeData={treeData}
-        selectedDocId={selectedDocId}
-        onSelectDocument={onSelectDocument}
-        loading={loadingTree}
-      />
+      {/* 5. Collapsible Multi-Level Document Tree (Bounded Flex Child) */}
+      <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+        <DocumentTreeView
+          treeData={treeData}
+          selectedDocId={selectedDocId}
+          onSelectDocument={onSelectDocument}
+          loading={loadingTree}
+        />
+      </div>
     </aside>
   );
 }

@@ -3,9 +3,12 @@
 import React from "react";
 import { User } from "lucide-react";
 import { Patient } from "@/types/patient";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 
 interface PatientProfileCardProps {
   patient: Patient | null;
+  /** @deprecated VN is removed from UI as it duplicates Visit Date */
   vn?: string | null;
 }
 
@@ -24,70 +27,70 @@ function formatThaiDob(dobString?: string | null) {
   }
 }
 
-export function PatientProfileCard({ patient, vn }: PatientProfileCardProps) {
+export function PatientProfileCard({ patient }: PatientProfileCardProps) {
   if (!patient) return null;
 
-  const displayVn =
-    vn ||
-    patient.encounters?.[0]?.en ||
-    (patient.hn === "08-24-00030" ? "08-24-110023" : undefined);
-
   return (
-    <div className="p-3 bg-gradient-to-br from-blue-50/80 to-slate-50 dark:from-slate-900 dark:to-slate-800/80 border-b border-slate-200 dark:border-slate-800">
-      <div className="flex items-start gap-3">
-        {/* Avatar Illustration */}
-        <div className="h-12 w-12 rounded-full bg-gradient-to-tr from-blue-600 to-cyan-500 p-0.5 shadow-sm shrink-0">
-          <div className="h-full w-full rounded-full bg-white dark:bg-slate-900 flex items-center justify-center overflow-hidden">
-            {patient.photo_url ? (
-              <img
+    <div className="px-3 py-2 bg-gradient-to-r from-blue-50/70 via-slate-50 to-slate-50 dark:from-slate-900 dark:via-slate-900/90 dark:to-slate-800/80 border-b border-slate-200 dark:border-slate-800">
+      <div className="flex items-center gap-2.5">
+        {/* Compact Avatar (38x38px) */}
+        <div className="h-9.5 w-9.5 rounded-full bg-gradient-to-tr from-blue-600 to-cyan-500 p-0.5 shadow-2xs shrink-0 ring-1 ring-blue-500/20">
+          <Avatar className="h-full w-full bg-white dark:bg-slate-900">
+            {patient.photo_url && (
+              <AvatarImage
                 src={patient.photo_url}
                 alt={patient.name_th}
-                className="h-full w-full object-cover"
-                onError={(e) => {
-                  (e.target as HTMLElement).style.display = "none";
-                }}
+                className="object-cover"
               />
-            ) : (
-              <User className="h-6 w-6 text-blue-600 dark:text-blue-400" />
             )}
-          </div>
+            <AvatarFallback className="bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400">
+              <User className="h-4.5 w-4.5 text-blue-600 dark:text-blue-400" />
+            </AvatarFallback>
+          </Avatar>
         </div>
 
-        {/* Patient Details */}
+        {/* Patient Details: Clean & Compact Inline Stack */}
         <div className="flex-1 min-w-0">
-          <div className="font-bold text-slate-900 dark:text-white text-sm truncate">
-            {patient.name_th}
+          {/* Row 1: Thai Name + HN Badge */}
+          <div className="flex items-center justify-between gap-1.5 leading-tight">
+            <span
+              className="font-bold text-slate-900 dark:text-white text-xs sm:text-[13px] truncate"
+              title={patient.name_th}
+            >
+              {patient.name_th}
+            </span>
+            <Badge
+              variant="secondary"
+              className="font-mono text-[10px] font-bold text-blue-700 dark:text-blue-300 bg-blue-100/80 dark:bg-blue-900/70 px-1.5 py-0 h-4 rounded shrink-0 border border-blue-200/60 dark:border-blue-800/60"
+            >
+              HN: {patient.hn}
+            </Badge>
           </div>
+
+          {/* Row 2: English Name */}
           {patient.name_en && (
-            <div className="text-[11px] text-slate-500 truncate">
+            <div
+              className="text-[11px] text-slate-500 dark:text-slate-400 truncate leading-tight mt-0.5"
+              title={patient.name_en}
+            >
               {patient.name_en}
             </div>
           )}
 
-          {/* Row 3: HN & Gender / Age */}
-          <div className="mt-1 flex items-center gap-1.5 flex-wrap">
-            <span className="font-mono text-xs font-bold text-blue-700 dark:text-blue-300 bg-blue-100/70 dark:bg-blue-900/60 px-1.5 py-0.5 rounded">
-              HN: {patient.hn}
+          {/* Row 3: Demographics Inline (เพศ • อายุ • วันเกิด) - ประหยัดพื้นที่ในแนวตั้ง */}
+          <div className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5 flex-wrap leading-tight mt-0.5">
+            <span className="font-medium text-slate-700 dark:text-slate-300">
+              {patient.gender || "-"}
             </span>
-            <span className="text-[11px] text-slate-500 font-medium">
-              {patient.gender || "-"} • {patient.age_display || "-"}
-            </span>
-          </div>
-
-          {/* Row 4: VN & Shifted Date of Birth */}
-          <div className="mt-1 flex items-center gap-2 flex-wrap">
-            {displayVn && (
-              <span className="font-mono text-xs font-semibold text-blue-800 dark:text-blue-200 bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 px-1.5 py-0.5 rounded shrink-0">
-                VN: {displayVn}
-              </span>
-            )}
+            <span className="text-slate-300 dark:text-slate-600">•</span>
+            <span>{patient.age_display || "-"}</span>
             {patient.dob && (
-              <span className="text-[11px] text-slate-500 whitespace-nowrap">
-                <span className="text-slate-400">วันเกิด: </span>
-                <span className="font-medium text-slate-700 dark:text-slate-300">
-                  {formatThaiDob(patient.dob)}
+              <>
+                <span className="text-slate-300 dark:text-slate-600">•</span>
+                <span className="whitespace-nowrap">
+                  เกิด {formatThaiDob(patient.dob)}
                 </span>
-              </span>
+              </>
             )}
           </div>
         </div>

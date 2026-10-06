@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Printer, Shield, Check, X } from "lucide-react";
+import { Printer, Shield } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -11,6 +11,11 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DocumentItem } from "@/types/document";
 import { documentApi } from "@/services/document-api";
 
@@ -59,7 +64,6 @@ export function PrintDialog({
       const printWindow = window.open(printUrl, "_blank");
       if (printWindow) {
         printWindow.focus();
-        // Give time for image to load before trigger print
         printWindow.onload = () => {
           printWindow.print();
         };
@@ -87,59 +91,67 @@ export function PrintDialog({
         </DialogHeader>
 
         <div className="space-y-4 py-2 text-xs">
-          <div className="bg-slate-50 dark:bg-slate-900 p-3 rounded-lg border border-slate-200 dark:border-slate-800 space-y-1">
-            <div className="font-semibold text-slate-800 dark:text-slate-100">
-              {document.title}
+          <div className="bg-slate-50 dark:bg-slate-900 p-3 rounded-lg border border-slate-200 dark:border-slate-800 space-y-1.5">
+            <div className="font-semibold text-slate-800 dark:text-slate-100 flex items-center justify-between">
+              <span className="truncate">{document.title}</span>
+              <Badge variant="secondary" className="font-mono text-[10px] shrink-0">
+                {document.total_pages} หน้า
+              </Badge>
             </div>
-            <div className="text-slate-500">
-              HN: <span className="font-mono">{document.hn}</span> • จำนวน {document.total_pages} หน้า
+            <div className="text-slate-500 flex items-center gap-2">
+              <span>HN: <span className="font-mono font-semibold text-slate-700 dark:text-slate-300">{document.hn}</span></span>
+              {document.document_code && (
+                <Badge variant="outline" className="font-mono text-[10px] py-0 h-4">
+                  {document.document_code}
+                </Badge>
+              )}
             </div>
           </div>
 
           <div className="space-y-2">
-            <label className="font-medium text-slate-700 dark:text-slate-300">
+            <Label className="font-medium text-slate-700 dark:text-slate-300">
               หน้าที่ต้องการพิมพ์:
-            </label>
-            <div className="flex gap-4">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="printRange"
-                  checked={printAllPages}
-                  onChange={() => setPrintAllPages(true)}
-                  className="text-blue-600 focus:ring-blue-500"
-                />
-                <span>ทุกหน้า (1 - {document.total_pages})</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="printRange"
-                  checked={!printAllPages}
-                  onChange={() => setPrintAllPages(false)}
-                  className="text-blue-600 focus:ring-blue-500"
-                />
-                <span>เฉพาะหน้าที่กำลังดู (หน้า {currentPage})</span>
-              </label>
-            </div>
+            </Label>
+            <Tabs
+              value={printAllPages ? "all" : "current"}
+              onValueChange={(val) => setPrintAllPages(val === "all")}
+              className="w-full"
+            >
+              <TabsList className="grid grid-cols-2 w-full h-8">
+                <TabsTrigger value="all" className="text-xs">
+                  ทุกหน้า (1 - {document.total_pages})
+                </TabsTrigger>
+                <TabsTrigger value="current" className="text-xs">
+                  เฉพาะหน้าที่กำลังดู (หน้า {currentPage})
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
           </div>
 
-          <div className="pt-2 border-t border-slate-200 dark:border-slate-800">
-            <label className="flex items-start gap-2.5 cursor-pointer">
-              <input
-                type="checkbox"
+          <Separator />
+
+          <div className="pt-1">
+            <label
+              htmlFor="watermark-checkbox"
+              className="flex items-start gap-2.5 cursor-pointer"
+            >
+              <Checkbox
+                id="watermark-checkbox"
                 checked={includeWatermark}
-                onChange={(e) => setIncludeWatermark(e.target.checked)}
-                className="mt-0.5 rounded text-blue-600 focus:ring-blue-500"
+                onCheckedChange={(checked) => setIncludeWatermark(!!checked)}
+                className="mt-0.5"
               />
-              <div>
-                <div className="font-medium text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+              <div className="space-y-0.5">
+                <Label
+                  htmlFor="watermark-checkbox"
+                  className="font-medium text-slate-800 dark:text-slate-200 flex items-center gap-1.5 cursor-pointer"
+                >
                   <Shield className="h-3.5 w-3.5 text-emerald-600" />
-                  ประทับตราลายน้ำ "สำเนาถูกต้อง COPY" และรหัสเจ้าหน้าที่ ({userId})
-                </div>
-                <div className="text-[11px] text-slate-500 mt-0.5">
+                  ประทับตราลายน้ำ &quot;สำเนาถูกต้อง COPY&quot; และรหัสเจ้าหน้าที่ ({userId})
+                </Label>
+                <p className="text-[11px] text-slate-500">
                   แนะนำให้เปิดไว้เพื่อความถูกต้องตามระเบียบ พ.ร.บ. เวชระเบียน
-                </div>
+                </p>
               </div>
             </label>
           </div>

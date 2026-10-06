@@ -8,17 +8,16 @@ import {
   RotateCw,
   RotateCcw,
   Palette,
-  Shield,
-  Printer,
   ChevronLeft,
   ChevronRight,
-  RefreshCw,
   PanelLeftClose,
   PanelLeftOpen,
   PanelRightClose,
   PanelRightOpen,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
 import {
   Tooltip,
   TooltipContent,
@@ -91,7 +90,7 @@ export function ViewerToolbar({
                 </TooltipContent>
               </Tooltip>
 
-              <div className="h-4 w-[1px] bg-slate-200 dark:bg-slate-700 mx-1" />
+              <Separator orientation="vertical" className="h-4 mx-1" />
             </div>
           )}
           <Tooltip>
@@ -155,7 +154,7 @@ export function ViewerToolbar({
             <TooltipContent>ขนาดจริง 100%</TooltipContent>
           </Tooltip>
 
-          <div className="h-4 w-[1px] bg-slate-200 dark:bg-slate-700 mx-1" />
+          <Separator orientation="vertical" className="h-4 mx-1" />
 
           {/* Rotation */}
           <Tooltip>
@@ -186,7 +185,7 @@ export function ViewerToolbar({
             <TooltipContent>หมุนขวา 90° (R)</TooltipContent>
           </Tooltip>
 
-          <div className="h-4 w-[1px] bg-slate-200 dark:bg-slate-700 mx-1" />
+          <Separator orientation="vertical" className="h-4 mx-1" />
 
           {/* Color Mode */}
           <Tooltip>
@@ -203,25 +202,9 @@ export function ViewerToolbar({
             </TooltipTrigger>
             <TooltipContent>สลับโหมดสี: สี / ขาวดำ / คอนทราสต์สูง / กลับสี</TooltipContent>
           </Tooltip>
-
-          {/* Watermark toggle */}
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant={state.showWatermark ? "secondary" : "ghost"}
-                size="sm"
-                onClick={controls.toggleWatermark}
-                className="h-8 px-2 text-xs gap-1"
-              >
-                <Shield className={`h-3.5 w-3.5 ${state.showWatermark ? "text-emerald-600" : "text-slate-400"}`} />
-                <span className="hidden lg:inline">ลายน้ำ</span>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>เปิด/ปิด ลายน้ำรักษาความปลอดภัย</TooltipContent>
-          </Tooltip>
         </div>
 
-        {/* Right Side: Page Switcher, Print, and Right Panel Toggle */}
+        {/* Right Side: Page Switcher and Right Panel Toggle */}
         <div className="flex items-center gap-1.5 shrink-0">
           {/* Page Switcher: แสดงตลอดเวลาในมือถือ (เพราะไม่มีแถบขวาข้างจอ) และแสดงใน Desktop เมื่อแถบขวาพับเก็บ */}
           {totalPages > 1 && (
@@ -231,53 +214,51 @@ export function ViewerToolbar({
                 rightSidebarOpen ? "flex md:hidden" : "flex"
               )}
             >
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={controls.prevPage}
-                disabled={state.currentPage <= 1}
-                className="h-7 w-7 p-0"
-                title="หน้าก่อนหน้า (ลูกศรซ้าย)"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <span className="px-1 sm:px-2 text-xs font-mono font-medium text-slate-700 dark:text-slate-300">
-                {state.currentPage} / {totalPages}
-              </span>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => controls.nextPage(totalPages)}
-                disabled={state.currentPage >= totalPages}
-                className="h-7 w-7 p-0"
-                title="หน้าถัดไป (ลูกศรขวา)"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-          )}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={controls.prevPage}
+                    disabled={state.currentPage <= 1}
+                    className="h-7 w-7 p-0"
+                    aria-label="หน้าก่อนหน้า"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>หน้าก่อนหน้า (ลูกศรซ้าย)</TooltipContent>
+              </Tooltip>
 
-          {onPrint && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={onPrint}
-                  className="hidden sm:inline-flex h-8 px-2.5 text-xs font-medium gap-1.5 border-slate-300 dark:border-slate-700 hover:bg-blue-50 hover:text-blue-700 dark:hover:bg-blue-950 shrink-0"
-                >
-                  <Printer className="h-3.5 w-3.5" />
-                  <span>พิมพ์</span>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>สั่งพิมพ์เอกสาร (Ctrl+P)</TooltipContent>
-            </Tooltip>
+              <Badge
+                variant="outline"
+                className="px-1.5 sm:px-2 text-xs font-mono font-medium text-slate-700 dark:text-slate-300 border-0 h-auto"
+              >
+                {state.currentPage} / {totalPages}
+              </Badge>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => controls.nextPage(totalPages)}
+                    disabled={state.currentPage >= totalPages}
+                    className="h-7 w-7 p-0"
+                    aria-label="หน้าถัดไป"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>หน้าถัดไป (ลูกศรขวา)</TooltipContent>
+              </Tooltip>
+            </div>
           )}
 
           {/* Toggle Right Thumbnail Strip (Desktop) or Open Thumbnail Drawer (Mobile) */}
           {totalPages > 1 && (
             <>
-              <div className="h-4 w-[1px] bg-slate-200 dark:bg-slate-700 mx-0.5 sm:mx-1 shrink-0" />
+              <Separator orientation="vertical" className="h-4 mx-0.5 sm:mx-1 shrink-0" />
 
               {/* Desktop Toggle Button */}
               {onToggleRightSidebar && (
