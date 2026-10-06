@@ -1,0 +1,87 @@
+# ==============================================================================
+# Yanhee e-Scan System (DMS) - Frontend Server Gateway Template (10.200.120.31)
+# Routes Web Traffic to Frontend (local:3000) and API to Backend (${BACKEND_HOST}:${BACKEND_PORT})
+# ==============================================================================
+
+upstream frontend_service {
+    server frontend:3000;
+    keepalive 32;
+}
+
+upstream backend_service {
+    server ${BACKEND_HOST}:${BACKEND_PORT};
+    keepalive 32;
+}
+
+server {
+    listen 80;
+    server_name _;
+
+    # Hospital Document Upload: Allow up to 100MB for batch medical scans & PDFs
+    client_max_body_size 100M;
+    client_body_buffer_size 16M;
+
+    # Performance: Gzip text compression
+    gzip on;
+    gzip_vary on;
+    gzip_min_length 1024;
+    gzip_proxied any;
+    gzip_comp_level 6;
+    gzip_types
+        text/plain
+        text/css
+        text/xml
+        text/javascript
+        application/json
+        application/javascript
+        application/x-javascript
+        application/xml
+        application/xml+rss
+        image/svg+xml;
+
+    # Timeouts for heavy processing (e.g., OCR, multi-page PDF generation)
+    proxy_connect_timeout 60s;
+    proxy_send_timeout 180s;
+    proxy_read_timeout 180s;
+
+    # 1. Backend API routes (Forward to ${BACKEND_HOST}:${BACKEND_PORT})
+    location /api/v1/ {
+        proxy_pass http://backend_service/api/v1/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # 2. FastAPI Health Check & Documentation
+    location /health {
+        proxy_pass http://backend_service/health;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+    }
+
+    location /docs {
+        proxy_pass http://backend_service/docs;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+    }
+
+    location /openapi.json {
+        proxy_pass http://backend_service/openapi.json;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+    }
+
+    # 3. Next.js Frontend (local container: frontend:3000)
+    location / {
+        proxy_pass http://frontend_service;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}

@@ -15,7 +15,7 @@ services:
     container_name: yanhee-dms-backend
     restart: unless-stopped
     ports:
-      - "${BACKEND_PORT:-8000}:8000"
+      - "${BACKEND_PORT:-8033}:8000"
     environment:
       - APP_NAME=Yanhee e-Scan DMS API
       - APP_VERSION=3.1.0
