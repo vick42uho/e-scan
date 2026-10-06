@@ -303,5 +303,79 @@ bun run dev --port 3000
 | **HN-Partitioned Storage** | ✅ เสร็จสมบูรณ์ | เก็บไฟล์แยกโฟลเดอร์ตาม `{HN}/...`, Relative Path ใน DB, ย้ายไฟล์ครบ 100% |
 | **Save Confirmation Modal** | ✅ เสร็จสมบูรณ์ | แสดงการ์ดสรุปข้อมูลเอกสาร พร้อมปุ่มเปิดดูทันทีและปุ่มสแกนเคสถัดไป |
 | **Offline Hospital Fonts** | ✅ เสร็จสมบูรณ์ | ฟอนต์ Sarabun และ TH Sarabun PSK ผ่าน LocalFont 100% ออฟไลน์ |
+| **Docker 2-Server Stack** | ✅ เสร็จสมบูรณ์ | แยก Frontend (8031) และ Backend/DB (8033/5434) ปลอดภัย ไม่ชนแอปอื่น |
+
+---
+
+## 🐳 การขึ้นระบบจริงด้วย Docker บน Ubuntu 24.04 LTS (Distributed 2-Server Deployment)
+
+ระบบถูกออกแบบสำหรับสถาปัตยกรรมระดับ Production ของโรงพยาบาล โดยแบ่งการทำงานออกเป็น **2 เซิร์ฟเวอร์** เพื่อประสิทธิภาพการจัดเก็บไฟล์สแกนและป้องกันการชนพอร์ต (Port Collision) กับแอปพลิเคชันอื่นในอนาคต:
+
+### 1. ผังการจัดสรรพอร์ตแยกเฉพาะ (Port Allocation Scheme)
+
+| เซิร์ฟเวอร์ | บทบาทบริการ | พอร์ตที่กำหนด | ตัวแปรคอนฟิก | รายละเอียด |
+|---|---|:---:|---|---|
+| **Server 1 (`10.200.120.31`)** | **Frontend Web & Nginx Gateway** | **`8031`** | `FRONTEND_PORT` | ลงท้ายด้วย 31 ตาม IP เครื่อง, ป้องกันการชนพอร์ต 80 ของแอปอื่น |
+| **Server 2 (`10.200.120.33`)** | **Backend API (FastAPI Engine)** | **`8033`** | `BACKEND_PORT` | ลงท้ายด้วย 33 ตาม IP เครื่อง, Uvicorn 4 workers |
+| **Server 2 (`10.200.120.33`)** | **PostgreSQL 14+ Instance** | **`5434`** | `DATABASE_URL` | ฐานข้อมูล `yanhee_escan_db` |
+
+---
+
+### 2. ขั้นตอนการติดตั้งบน Server 2 (`10.200.120.33`) — Backend + DB
+
+```bash
+# 1. Clone โค้ดลงเครื่อง
+git clone https://github.com/vick42uho/e-scan.git dms
+cd dms
+
+# 2. ตั้งค่าไฟล์ .env สำหรับ Backend
+cp .env.backend.example .env
+
+# 3. เปิด Firewall พอร์ต 8033
+sudo ufw allow 8033/tcp comment "Yanhee DMS Backend API"
+
+# 4. สั่งรัน Backend Container
+docker compose -f docker-compose.backend.yml up -d --build
+
+# 5. ตรวจสอบและสร้างฐานข้อมูล + ตารางทั้งหมดโดยอัตโนมัติ
+docker compose -f docker-compose.backend.yml exec backend uv run python scripts/init_db.py
+
+# 6. (ทางเลือก) สร้าง Mock Data สำหรับทดสอบระบบ
+docker compose -f docker-compose.backend.yml exec backend uv run python scripts/seed_mock_data.py
+
+# 7. ตรวจสอบ Health Check
+curl http://localhost:8033/health
+```
+
+---
+
+### 3. ขั้นตอนการติดตั้งบน Server 1 (`10.200.120.31`) — Frontend Server
+
+```bash
+# 1. Clone โค้ดลงเครื่อง
+git clone https://github.com/vick42uho/e-scan.git dms
+cd dms
+
+# 2. ตั้งค่าไฟล์ .env สำหรับ Frontend
+cp .env.frontend.example .env
+
+# 3. เปิด Firewall พอร์ต 8031
+sudo ufw allow 8031/tcp comment "Yanhee DMS Frontend Web"
+
+# 4. สั่งรัน Frontend + Nginx Gateway
+docker compose -f docker-compose.frontend.yml up -d --build
+
+# 5. ตรวจสอบสถานะว่า Gateway ส่งต่อข้ามเครื่องสำเร็จ
+curl http://localhost:8031/health
+```
+
+---
+
+### 4. การเข้าใช้งานระบบ
+* **หน้าเว็บระบบสแกนและเปิดดูเอกสาร**: `http://10.200.120.31:8031/`
+  * หน้าดูเอกสารเวชระเบียน: `http://10.200.120.31:8031/view`
+  * หน้าสแกนเอกสาร: `http://10.200.120.31:8031/scan`
+* **Swagger API Documentation**: `http://10.200.120.31:8031/docs` หรือ `http://10.200.120.33:8033/docs`
+
 
 

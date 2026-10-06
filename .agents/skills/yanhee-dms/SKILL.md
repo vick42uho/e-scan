@@ -69,9 +69,9 @@ The **Yanhee e-Scan System (DMS)** is the mission-critical hospital document man
                                                   | Connection Pool (psycopg / SQLAlchemy 2.0)
                                                   v
 +---------------------------------------------------------------------------------------------------+
-|                            PostgreSQL Database Server (10.200.11.2:5432)                          |
+|                            PostgreSQL Database Server (10.200.120.33:5434)                        |
 |   - Database: yanhee_escan_db                                                                     |
-|   - User: dev_admin (Password: it240)                                                             |
+|   - User: admin (Password: it240)                                                                 |
 |   - Tables: patients, encounters, document_categories, documents, document_pages, audit_logs     |
 +---------------------------------------------------------------------------------------------------+
 ```
@@ -617,5 +617,88 @@ To prevent filesystem degradation and directory index bloat when handling hundre
 | **Encounter & Visit** | Encounter Date Synchronization + Descending Chronological Tree | ✅ Tested & Working |
 | **Storage Architecture**| HN-Partitioned (`documents/{HN}/`) + Relative DB Paths | ✅ 100% Migrated (28/28 verified) |
 | **Offline Typography** | LocalFont Sarabun / TH Sarabun PSK (Intranet 100%) | ✅ Production Ready |
+| **Docker Multi-Server** | 2-Server Stack (Frontend: 8031, Backend: 8033, DB: 5434) | ✅ Verified & Automated |
+
+---
+
+## 16. Distributed 2-Server Production Deployment & Multi-App Coexistence
+
+### 16.1 Server Roles & Port Allocation Scheme
+To guarantee zero port collision with current and future hospital applications sharing the same Ubuntu 24.04 hosts:
+
+```
+[ Hospital Staff Browser ]
+          │
+          │ HTTP (:8031)
+          ▼
+┌────────────────────────────────────────────────────────┐
+│ Server 1: Frontend Server (10.200.120.31)              │
+│                                                        │
+│  ┌──────────────────────────────────────────────────┐  │
+│  │ Nginx Gateway Container (Port 8031:80)           │  │
+│  │                                                  │  │
+│  │   • "/"           ──► Next.js (Port 3000)        │  │
+│  │   • "/api/v1/"    ──► http://10.200.120.33:8033  │──┼──┐ (Intranet LAN)
+│  │   • "/health"     ──► http://10.200.120.33:8033  │  │  │
+│  │   • "/docs"       ──► http://10.200.120.33:8033  │  │  │
+│  └───────────────────┬──────────────────────────────┘  │  │
+│                      │                                 │  │
+│  ┌───────────────────▼──────────────────────────────┐  │  │
+│  │ Next.js 16 App Container (Port 3000 Standalone)  │  │  │
+│  └──────────────────────────────────────────────────┘  │  │
+└────────────────────────────────────────────────────────┘  │
+                                                            │
+┌───────────────────────────────────────────────────────────▼┐
+│ Server 2: Backend & Database Server (10.200.120.33)        │
+│                                                            │
+│  ┌──────────────────────────────────────────────────────┐  │
+│  │ FastAPI Backend Container (Port 8033:8000)           │  │
+│  │ (Python 3.13 + uv + Uvicorn 4 workers)               │  │
+│  │                                                      │  │
+│  │   • Volume: ./backend/storage/documents              │  │
+│  │   • Volume: ./backend/storage/thumbnails             │  │
+│  └───────────────────────┬──────────────────────────────┘  │
+│                          │ Local socket / port             │
+│                          │ (:5434)                         │
+│  ┌───────────────────────▼──────────────────────────────┐  │
+│  │ PostgreSQL 14+ Instance (Port 5434)                  │  │
+│  │ (Database: yanhee_escan_db, User: admin)             │  │
+│  └──────────────────────────────────────────────────────┘  │
+└────────────────────────────────────────────────────────────┘
+```
+
+| Host IP | Service Role | Exposed Port | Config Variable | Notes |
+|---|---|:---:|---|---|
+| **10.200.120.31** | Frontend Web & Nginx Gateway | **`8031`** | `FRONTEND_PORT` | Mnemonic matches .31; no collision with port 80/8080 |
+| **10.200.120.33** | Backend API (FastAPI) | **`8033`** | `BACKEND_PORT` | Mnemonic matches .33; Uvicorn 4 workers |
+| **10.200.120.33** | PostgreSQL Instance | **`5434`** | `DATABASE_URL` | Dedicated non-standard DB port |
+
+### 16.2 Dynamic Nginx Template Configuration
+- `nginx/nginx.frontend.conf.template`:
+  - Uses `server ${BACKEND_HOST}:${BACKEND_PORT};` in `upstream backend_service`.
+  - Configures `NGINX_ENVSUBST_FILTER="BACKEND_HOST BACKEND_PORT"`.
+  - Nginx Docker entrypoint substitutes only these two variables, preventing variable contamination with Nginx internal variables (`$host`, `$remote_addr`, `$proxy_add_x_forwarded_for`, `$http_upgrade`).
+  - Sets `client_max_body_size 100M;` and `proxy_read_timeout 180s;` for reliable scanning and large multi-page PDF streaming.
+
+### 16.3 Automated Database Provisioning (`init_db.py`)
+- Automatically checks if target database `yanhee_escan_db` exists on `10.200.120.33:5434`.
+- If absent, connects with `AUTOCOMMIT` to default admin DB (`postgres`), creates `yanhee_escan_db` with `UTF8` encoding, and provisions all relational tables (`patients`, `encounters`, `document_categories`, `documents`, `document_pages`, `audit_logs`).
+- 100% idempotent and safe for repeated executions.
+
+### 16.4 Deployment Commands Summary
+- **On Server 2 (`10.200.120.33`)**:
+  ```bash
+  cp .env.backend.example .env
+  sudo ufw allow 8033/tcp
+  docker compose -f docker-compose.backend.yml up -d --build
+  docker compose -f docker-compose.backend.yml exec backend uv run python scripts/init_db.py
+  ```
+- **On Server 1 (`10.200.120.31`)**:
+  ```bash
+  cp .env.frontend.example .env
+  sudo ufw allow 8031/tcp
+  docker compose -f docker-compose.frontend.yml up -d --build
+  ```
+
 
 
