@@ -623,6 +623,8 @@ To prevent filesystem degradation and directory index bloat when handling hundre
 
 ## 16. Distributed 2-Server Production Deployment & Multi-App Coexistence
 
+> Reference: See full operational runbook with step-by-step update commands in [DEPLOYMENT_GUIDE.md](file:///d:/My-work_My-Everything/DMS/DEPLOYMENT_GUIDE.md).
+
 ### 16.1 Server Roles & Port Allocation Scheme
 To guarantee zero port collision with current and future hospital applications sharing the same Ubuntu 24.04 hosts:
 
