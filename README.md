@@ -210,16 +210,26 @@ bun run dev --port 3000
 * **เจาะจงเครื่องสแกนที่เลือก**: ส่งคำสั่งไปยัง Device ID และชื่อเครื่องที่ผู้ใช้งานเลือกใน Top Bar โดยตรง (เช่น EPSON Perfection V39) ไม่สับสนกับ Default Printer ใน Windows
 * **ป้องกันอุปกรณ์ซ้ำซ้อน**: กรองไดรเวอร์ eSCL Network ที่ซ้ำกับ Native WIA Driver ป้องกันปัญหาชื่อเครื่องเบิ้ล
 
-### 2. ระบบอ่านข้อความภาษาไทยด้วย AI OCR (PaddleOCR ONNX Thai Model)
-* **โมเดลภาษาไทยเฉพาะทาง**: ติดตั้ง PaddleOCR Thai ONNX Model ใน `backend/models/ocr/thai/rec.onnx` และ `dict.txt` ประมวลผลรวดเร็วและแม่นยำสูง
+### 2. ระบบอ่านข้อความภาษาไทยด้วย AI OCR (PaddleOCR ONNX Thai Model) & Hybrid Engine
+* **โมเดลภาษาไทยเฉพาะทาง**: ติดตั้ง PaddleOCR Thai ONNX Model ใน `backend/models/ocr/thai/rec.onnx` และ `dict.txt` ขับเคลื่อนด้วย `RapidOCR` + `ONNXRuntime`
+* ⚠️ **ข้อกำหนดด้าน Dependencies ใน Docker (`uv.lock`)**:
+  * ระบบต้องการ `rapidocr-onnxruntime>=1.4.0` และ `onnxruntime>=1.20.0` ใน `pyproject.toml`
+  * หากแพ็กเกจนี้หายไป Docker build จะไม่สามารถโหลดโมเดล OCR ได้ และระบบจะ Fallback เป็น Barcode-only (อ่านได้แค่ HN จากบาร์โค้ด) ดังนั้นจึงต้องล็อก Dependency ไว้ใน `uv.lock` เสมอ
+* **ระบบตรวจจับ Barcode หลายทิศทาง (Multi-Pass Auto-Rotation & Adaptive Thresholding)**:
+  * ในเอกสารจริง สติกเกอร์บาร์โค้ดอาจหมุน 90°, 180°, 270° หรือซีดจาง
+  * ฟังก์ชัน `detect_barcodes()` ใช้การสแกนแบบ Multi-pass (Original ➔ หมุน 4 ทิศ ➔ Grayscale Adaptive Threshold) และอ่านบาร์โค้ดทั้งหมดบนหน้า (ทั้ง HN `000000002` และ VN `OP26040000006`) โดยไม่หลุด break กลางคัน
 * **ระบบปรับทิศทางภาพอัตโนมัติ (Intelligent Auto-Orientation)**: ตรวจวัดคะแนนความหนาแน่นตัวอักษรภาษาไทยระหว่าง 0°, 270°, 90°, 180° หมุนเอกสารที่สแกนแนวนอนจาก Flatbed ให้ตั้งตรงและอ่านข้อความได้อย่างถูกต้องทันที
-* **สกัดข้อมูลสำคัญลงฟอร์มอัตโนมัติ**:
-  * **ชื่อผู้ป่วยภาษาไทย**: เช่น `น.ส. จิราพร ภู่มะลิ` (พร้อมแก้ไขตัวสะกดคำนำหน้าชื่อ OCR)
-  * **ชื่อผู้ป่วยภาษาอังกฤษ**: เช่น `JIRAPORN PHUMALI`
-  * **อายุ**: คำนวณเทียบปีปัจจุบันหรือสกัดจากเอกสาร เช่น `24 ปี`
-  * **วันเกิด**: แปลงตัวสะกดเดือนภาษาไทย เช่น `03 เม.ย. 2545`
-  * **ชื่อแพทย์ผู้ตรวจ**: ตรวจจับ `DOCTOR YANHEE`, `นพ. ...`, `พญ. ...`, และแผนกคู่แพทย์
-  * **เลขที่ HN/VN**: สกัดจาก Barcode, QR Code, และข้อความบนเอกสาร พร้อมดึงข้อมูลจากฐานข้อมูลเวชระเบียนมาเติมให้อัตโนมัติ
+* **สกัดข้อมูลสำคัญลงฟอร์มอัตโนมัติ (Auto Extraction)**:
+  * **ชื่อผู้ป่วยภาษาไทย (`name_th`)**: เช่น `น.ส. จิราพร ภู่มะลิ` พร้อมระบบตัดคำภาษาอังกฤษส่วนเกิน (Stop Keywords เช่น `Name :`, `HN`) ไม่ให้รั่วไหลปนชื่อไทย
+  * **ชื่อผู้ป่วยภาษาอังกฤษ (`name_en`)**: เช่น `JIRAPORN PHUMALI`
+  * **เลขที่รับบริการ (VN / EN)**: ตรวจจับเลขที่รับบริการ 11 หลัก เช่น `OP26040000006` พร้อมแก้ไขตัวสะกด OCR ที่เพี้ยน (เช่น `CP` หรือ `CIP` ➔ ปรับเป็น `OP` อัตโนมัติ)
+  * **วันที่รับบริการ พ.ศ. (`visit_date`)**: แปลงวันที่ภาษาไทย เช่น `Print Date : 10 ก.ค. 2569` เป็นรูปแบบ ISO `2026-07-10` อัตโนมัติ
+  * **เวลารับบริการ (`visit_time`)**: สกัดเวลา เช่น `10:12` ➔ `10:12:00`
+  * **อายุ (`age`)**: คำนวณเทียบปีปัจจุบันหรือสกัดจากเอกสาร เช่น `24 ปี`
+  * **วันเกิด (`dob`)**: แปลงตัวสะกดเดือนภาษาไทย เช่น `03 เม.ย. 2545` ➔ `2002-04-03`
+  * **ชื่อแพทย์ผู้ตรวจ (`doctor_name`)**: ตรวจจับ `DOCTOR YANHEE` (พร้อมขจัด Noise เช่น `YANe4EE`), `นพ. ...`, `พญ. ...` และติ๊กเลือก `is_doctor_document = true` ให้อัตโนมัติ
+  * **หมวดหมู่เอกสาร (`category_id`)**: สำหรับใบ Visit Slip ระบบจะจับคู่กับรหัสหมวดหมู่ `OPD-NOTE` (ID 1: บันทึกการตรวจผู้ป่วยนอก) ของโรงพยาบาลยันฮีโดยตรง
+  * **โหมดตรวจจับ Hybrid**: เมื่ออ่านได้ทั้งบาร์โค้ดและข้อความ OCR ระบบจะแสดงป้าย `[ตรวจจับอัตโนมัติ (Hybrid: Barcode + OCR)]` พร้อมระดับความเชื่อมั่น 99%
 
 ### 3. มาตรฐานเวชระเบียน HA/JCI สำหรับ Checkbox "เป็นเอกสารบันทึกของแพทย์โดยตรง"
 * **บันทึกของแพทย์โดยตรง (`is_doctor_document = true`)**: เอกสารทางคลินิกที่แพทย์ลงบันทึกเอง เช่น Progress Note, Doctor's Orders, Operative Note
@@ -378,6 +388,44 @@ curl http://localhost:8031/health
   * หน้าดูเอกสารเวชระเบียน: `http://10.200.120.31:8031/view`
   * หน้าสแกนเอกสาร: `http://10.200.120.31:8031/scan`
 * **Swagger API Documentation**: `http://10.200.120.31:8031/docs` หรือ `http://10.200.120.33:8033/docs`
+
+---
+
+### 5. วิธีการอัปเดตโค้ดบนทั้งสองเซิร์ฟเวอร์ (How to Update Production Servers)
+
+> ⚠️ **คำเตือนสถาปัตยกรรม (แยก 2 เซิร์ฟเวอร์เด็ดขาด)**:
+> หน้าบ้าน (`10.200.120.31`) และหลังบ้าน (`10.200.120.33`) แยกเครื่องกันชัดเจน **ห้ามรันคำสั่งสลับเครื่องเด็ดขาด!**
+
+#### 🔹 บน Server 2 (`10.200.120.33`) — Backend API + Database
+```bash
+cd /home/it-dev/dms   # หรือโฟลเดอร์โปรเจกต์บนเครื่อง
+git pull origin main
+
+# สั่ง Rebuild Backend Container (ติดตั้ง uv dependencies ใหม่ รวมถึง rapidocr-onnxruntime)
+docker compose -f docker-compose.backend.yml up -d --build backend
+
+# ตรวจสอบว่า RapidOCR และ ONNX Runtime ทำงานได้สมบูรณ์ใน Container
+docker compose -f docker-compose.backend.yml exec backend uv run python -c "from rapidocr_onnxruntime import RapidOCR; print('RapidOCR Ready')"
+
+# (ทางเลือก) อัปเดตข้อมูลตัวอย่างจำลองคนไข้และเลข VN
+docker compose -f docker-compose.backend.yml exec backend uv run python scripts/seed_mock_data.py
+
+# ตรวจสอบ Health Check หลังบ้าน
+curl http://localhost:8033/health
+```
+
+#### 🔹 บน Server 1 (`10.200.120.31`) — Frontend Web + Nginx Gateway
+```bash
+cd /home/it-dev/dms   # หรือโฟลเดอร์โปรเจกต์บนเครื่อง
+git pull origin main
+
+# สั่ง Rebuild Frontend Container (Next.js 16 Standalone)
+docker compose -f docker-compose.frontend.yml up -d --build frontend
+
+# ตรวจสอบ Health Check ผ่าน Nginx Gateway หน้าบ้าน
+curl http://localhost:8031/health
+```
+
 
 
 

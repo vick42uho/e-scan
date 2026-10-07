@@ -467,26 +467,59 @@ External hospital vendors (e.g., outsourced lab centers, imaging clinics, specia
   - Strict scanner target matching: matches by device ID, normalized backslash/slash path, and device name, ensuring the user's selected scanner in the DMS top bar is always used rather than the Windows system default printer/scanner.
   - High-contrast dropdown styles (`data-highlighted:bg-blue-600 data-highlighted:text-white`) prevent unreadable black-on-black hover states in Radix Combobox.
 
-### 11.2 High-Performance Thai OCR Engine
+### 11.2 High-Performance Thai OCR Engine & Dependency Integrity
 - **Engine**: PaddleOCR Thai ONNX Recognition Model (`backend/models/ocr/thai/rec.onnx` + `dict.txt`) loaded via `RapidOCR`.
+- **Mandatory Dependencies (`pyproject.toml` & `uv.lock`)**:
+  - `rapidocr-onnxruntime>=1.4.0`
+  - `onnxruntime>=1.20.0`
+  - ⚠️ **CRITICAL DEPLOYMENT ALERT (ป้องกันปัญหาอ่านได้แค่ Barcode HN)**:
+    - In containerized production (`uv sync --frozen`), if `rapidocr-onnxruntime` is omitted from `pyproject.toml` or `uv.lock`, the Docker container will NOT install RapidOCR.
+    - When `get_ocr_engine()` in `scan_service.py` runs, it will catch `ModuleNotFoundError: No module named 'rapidocr_onnxruntime'` and return `None`.
+    - **Failure Symptom**: The system silently degrades to barcode-only fallback (`mode_used = "barcode"`), extracting only `[สติกเกอร์ Barcode / QR]: HN: 000000002` while leaving VN/EN, Patient Name, DOB, Age, Visit Date, Visit Time, Doctor, and Category completely blank!
+    - Always verify `uv run python -c "from rapidocr_onnxruntime import RapidOCR; print('OCR Ready')"` inside the backend container.
 - **Auto-Orientation Detection**:
   - Flatbed scanners (e.g. EPSON V39) scan documents in landscape orientation (270° relative to upright portrait).
   - Evaluates rotation candidates (0°, 270°, 90°, 180°) dynamically based on Thai character density and length (`score = thai_chars * 3 + text_length`).
   - Automatically selects the upright orientation without manual operator intervention.
 
 ### 11.3 Thai Clinical Slip Metadata Extraction & Normalization
-- **Thai Patient Name**:
+- **Multi-Pass Barcode Detection Engine (`detect_barcodes()`)**:
+  - Medical slips often have barcodes at varied angles (e.g. vertical margin barcodes, rotated labels) or lower contrast.
+  - `detect_barcodes()` implements a resilient 3-stage multi-pass reading pipeline:
+    1. **Pass 1 (Standard)**: Read original orientation with `zxingcpp.read_barcodes()`.
+    2. **Pass 2 (4-Angle Rotations)**: Evaluates 90°, 180°, and 270° rotations with `np.rot90`.
+    3. **Pass 3 (Adaptive Thresholding)**: Grayscale conversion + contrast stretching + `cv2.adaptiveThreshold` + Gaussian blur to rescue faint thermal barcodes.
+  - **Multi-Barcode Aggregation**: Does NOT break on the first barcode found; instead, iterates through all candidates and merges them (e.g. detecting both HN `000000002` and VN `OP26040000006` from separate stickers on a single sheet).
+- **Thai Patient Name (`name_th`)**:
   - Regex detects standard Thai honorifics and prefixes: `น.ส.`, `นางสาว`, `นาย`, `นาง`, `ด.ช.`, `ด.ญ.`, `คุณ`.
   - Normalizes common OCR artifacts: `U.a.`, `u.a.`, `น.a.` -> `น.ส.`.
+  - **Boundary Keyword Protection**: Trims trailing labels using `stop_keywords = ["Name", "Name :", "HN", "VN", "DOB", "Age", "Date", "เวลา"]` to prevent English form labels from corrupting the Thai name.
   - Prioritizes Thai name (`name_th`) over English name (`name_en`) on Thai hospital forms.
-- **Patient Age**:
+- **Encounter Number (VN / EN)**:
+  - Regex: `(?:VN|EN|OP|IP|CP|CIP)[\s.:#-]*([0-9A-Z]{5,15})` and standalone `(?:OP|IP|CP|CIP)[0-9]{5,15}`.
+  - Supports hospital 11-digit VN numbers (e.g. `OP26040000006`).
+  - Corrects common OCR misreadings of `OP` (e.g. `CP` or `CIP` -> normalized to `OP`).
+  - Automatically selects encounter type pill (`OPD` for `OP`, `IPD` for `IP`).
+- **Thai Buddhist Era (BE) Date Parsing (`visit_date`)**:
+  - Detects `Print Date : DD ม.ค. YYYY` (e.g. `Print Date : 10 ก.ค. 2569` or `10/07/2569`).
+  - Converts Thai BE year (`2569` - 543 = `2026`) into standard ISO format `2026-07-10`.
+- **Visit Time (`visit_time`)**:
+  - Extracts time format `HH:MM` or `HH:MM:SS` associated with `Print Date` or `Time:` labels (e.g. `10:12` -> `10:12:00`).
+- **Patient Age (`age`)**:
   - Normalizes Thai age indicators: `อายุ: 24 ปี`, `อาย: 24 ป`, `24 ปี`.
   - Dynamically calculates age from DOB and the current year to ensure age remains perpetually up-to-date.
-- **Date of Birth (DOB)**:
+- **Date of Birth (`dob`)**:
   - Normalizes OCR Thai month abbreviations: `เม.0.` / `เม.1.` -> `เม.ย.`, `ม.n.` -> `ม.ค.`, `ก.w.` -> `ก.พ.`.
   - Formats date into standard Thai Buddhist Era (BE) string (e.g. `03 เม.ย. 2545`) and CE date (`2002-04-03`).
-- **Doctor Name**:
-  - Matches hospital doctor patterns: `DOCTOR YANHEE`, department + doctor lines (`อายุรกรรม , DOCTOR YANHEE , Cath Lab`), `นพ.`, `พญ.`, `Dr.`, `แพทย์`.
+- **Doctor Name (`doctor_name`)**:
+  - Matches hospital doctor patterns: `DOCTOR YANHEE` (normalizes OCR noise e.g. `YANe4EE`), department + doctor lines (`อายุรกรรม , DOCTOR YANHEE , Cath Lab`), `นพ.`, `พญ.`, `Dr.`, `แพทย์`.
+  - Automatically checks `is_doctor_document = true` when a doctor name is identified.
+- **Category Code Matching (`category_id`)**:
+  - Maps OPD clinical visit slips directly to active database category code `OPD-NOTE` (ID 1: บันทึกการตรวจผู้ป่วยนอก).
+  - Never use placeholder or non-existent category codes (e.g. `MED_RECORD`).
+- **Hybrid Extraction Mode Badge**:
+  - When both Barcode and OCR contribute to metadata extraction, sets `mode_used = "hybrid"`, confidence `0.99`.
+  - Frontend displays `[ตรวจจับอัตโนมัติ (Hybrid: Barcode + OCR)]` badge.
 - **Database Enrichment**:
   - Matches detected HN (or barcode) against the database and enriches with registered official Thai names and latest encounter info.
 
@@ -702,5 +735,42 @@ To guarantee zero port collision with current and future hospital applications s
   docker compose -f docker-compose.frontend.yml up -d --build
   ```
 
+### 16.5 Production Update & Redeployment Protocol (แยก 2 Server เด็ดขาด)
 
+> ⚠️ **CRITICAL ARCHITECTURE RULE FOR AI AGENTS & DEVELOPERS**:
+> The DMS production environment is hosted on **2 physically separate Ubuntu 24.04 servers**.
+> **NEVER run a unified `docker compose up` or cross-deploy frontend/backend containers!**
+> - **Frontend Server (`10.200.120.31`)**: Only runs `docker-compose.frontend.yml` (Nginx Gateway + Next.js 16 standalone on Port `8031`).
+> - **Backend Server (`10.200.120.33`)**: Only runs `docker-compose.backend.yml` (FastAPI Engine on Port `8033` + PostgreSQL 14 on Port `5434`).
 
+#### Step-by-Step Update Runbook:
+
+**1. On Backend Server (`10.200.120.33`)**:
+```bash
+cd /path/to/dms
+git pull origin main
+
+# Rebuild backend container (pulls updated pyproject.toml & uv.lock with rapidocr-onnxruntime)
+docker compose -f docker-compose.backend.yml up -d --build backend
+
+# Verify RapidOCR and ONNX runtime are functional inside container
+docker compose -f docker-compose.backend.yml exec backend uv run python -c "from rapidocr_onnxruntime import RapidOCR; print('RapidOCR Ready')"
+
+# Seed / update mock clinical records (HN 000000002, VN OP26040000006)
+docker compose -f docker-compose.backend.yml exec backend uv run python scripts/seed_mock_data.py
+
+# Health check
+curl http://localhost:8033/health
+```
+
+**2. On Frontend Server (`10.200.120.31`)**:
+```bash
+cd /path/to/dms
+git pull origin main
+
+# Rebuild frontend container (Next.js 16 build)
+docker compose -f docker-compose.frontend.yml up -d --build frontend
+
+# Health check through Nginx Gateway
+curl http://localhost:8031/health
+```
