@@ -43,7 +43,7 @@ services:
     environment:
       - BACKEND_HOST=${BACKEND_HOST:-10.200.120.33}
       - BACKEND_PORT=${BACKEND_PORT:-8033}
-      - NGINX_ENVSUBST_FILTER=BACKEND_HOST BACKEND_PORT
+      - NGINX_ENVSUBST_FILTER=BACKEND_.*
     volumes:
       - ./nginx/nginx.frontend.conf.template:/etc/nginx/templates/default.conf.template:ro
     depends_on:
