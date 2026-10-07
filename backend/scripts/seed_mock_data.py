@@ -138,6 +138,19 @@ def seed_data():
                 "allergies": "ไม่มีประวัติแพ้ยา (NKDA)",
                 "rights": "ไทยประกันชีวิต จำกัด (มหาชน) (TLC) / IPD",
                 "photo_url": None
+            },
+            # Patient 6: Miss Jiraporn Phumali (Visit Slip 000000002)
+            {
+                "hn": "000000002",
+                "name_th": "น.ส. จิราพร ภู่มะลิ",
+                "name_en": "Miss JIRAPORN PHUMALI",
+                "dob": date(2002, 4, 3),
+                "gender": "หญิง",
+                "age_display": "24 ปี",
+                "id_card": "1-1002-00561-88-9",
+                "allergies": "Side Effects: MP Rash, อาการเบื้องต้น: เป็นไข้และปวดหัว",
+                "rights": "บุคคลทั่วไป (ชำระเงินเอง) / Selfpay",
+                "photo_url": None
             }
         ]
 
@@ -147,6 +160,19 @@ def seed_data():
 
         print("\n=== Step 5: Seeding Hospital Encounters (Visits) ===")
         encounters_data = [
+            # Patient 6 Encounter (Visit Slip OP26040000006)
+            Encounter(
+                en="OP26040000006",
+                hn="000000002",
+                visit_date=date(2026, 7, 10),
+                visit_time="10:12:00",
+                department_code="08OPD_MED",
+                department_name="อายุรกรรม (Cath Lab)",
+                doctor_code="YH00999",
+                doctor_name="DOCTOR YANHEE",
+                encounter_type="OPD",
+                chief_complaint="เป็นไข้และปวดหัว (MP Rash)",
+            ),
             # Patient 1 Encounters
             Encounter(
                 en="08-24-110023",

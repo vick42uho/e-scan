@@ -241,6 +241,7 @@ export default function ScanWorkspace() {
           barcode: 'สติ๊กเกอร์ Barcode / QR',
           pdf_text: 'ข้อความดิจิทัล (PDF Text Layer)',
           ocr: 'OCR อ่านข้อความจากภาพ',
+          hybrid: 'ตรวจจับอัตโนมัติ (Hybrid: Barcode + OCR)',
           auto: 'ตรวจจับอัตโนมัติ (Hybrid)'
         };
         const modeText = modeLabels[res.mode_used] || res.mode_used;
@@ -314,30 +315,28 @@ export default function ScanWorkspace() {
         const newIndex = pages.length;
         setActiveIndex(newIndex);
 
-        // ตรวจสอบ Barcode / QR Code (รองรับทั้ง Key=Value และ Barcode เดี่ยว)
+        // ตรวจสอบ Barcode / QR Code (รองรับทั้ง Key=Value และ Barcode เดี่ยวหลายรายการ)
         if (barcodes && barcodes.length > 0) {
+          const merged: Record<string, any> = {};
+          let targetHn = '';
           for (const bc of barcodes) {
             const parsed = parseBarcodePayload(bc.text, categories);
             if (parsed) {
-              setFormData(prev => ({
-                ...prev,
-                hn: parsed.hn || prev.hn,
-                en: parsed.en || prev.en,
-                visit_date: parsed.visit_date || prev.visit_date,
-                visit_time: parsed.visit_time || prev.visit_time,
-                category_id: (parsed.category_id !== null && parsed.category_id !== undefined) ? parsed.category_id : prev.category_id,
-                title: parsed.title || prev.title,
-                dob: parsed.dob || prev.dob,
-                age: parsed.age || prev.age,
-                encounter_type: parsed.encounter_type || prev.encounter_type,
-                patient_name: parsed.patient_name || prev.patient_name,
-                doctor_name: parsed.doctor_name || prev.doctor_name,
-                document_code: parsed.document_code || prev.document_code,
-              }));
-              if (parsed.hn) {
-                getEncounters(parsed.hn).then(setEncounters).catch(console.error);
+              if (parsed.hn) targetHn = parsed.hn;
+              for (const [k, v] of Object.entries(parsed)) {
+                if (v !== undefined && v !== null && v !== '') {
+                  merged[k] = v;
+                }
               }
-              break;
+            }
+          }
+          if (Object.keys(merged).length > 0) {
+            setFormData(prev => ({
+              ...prev,
+              ...merged,
+            }));
+            if (targetHn) {
+              getEncounters(targetHn).then(setEncounters).catch(console.error);
             }
           }
         }

@@ -162,10 +162,13 @@ export function parseBarcodePayload(
     // Single-field barcode / QR code fallback
     if (/^\d{2}-?\d{2}-?\d{5,6}$/.test(raw) || /^\d{6,12}$/.test(raw)) {
       result.hn = raw;
-    } else if (raw.startsWith('OP') || raw.startsWith('IP') || raw.startsWith('EN-') || raw.startsWith('VN-')) {
-      result.en = raw;
-      if (raw.startsWith('OP') || raw.startsWith('VN')) result.encounter_type = 'OPD';
-      if (raw.startsWith('IP')) result.encounter_type = 'IPD';
+    } else if (raw.startsWith('OP') || raw.startsWith('IP') || raw.startsWith('EN-') || raw.startsWith('VN-') || raw.startsWith('CP') || raw.startsWith('CIP')) {
+      let norm = raw;
+      if (norm.startsWith('CIP')) norm = 'OP' + norm.substring(3);
+      else if (norm.startsWith('CP')) norm = 'OP' + norm.substring(2);
+      result.en = norm;
+      if (norm.startsWith('OP') || norm.startsWith('VN')) result.encounter_type = 'OPD';
+      if (norm.startsWith('IP')) result.encounter_type = 'IPD';
     } else if (raw.startsWith('FM-') || raw.startsWith('DOC-') || raw.startsWith('SUR-')) {
       result.document_code = raw;
     }

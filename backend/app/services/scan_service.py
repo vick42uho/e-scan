@@ -713,31 +713,54 @@ class ScanService:
         
     def detect_barcodes(self, file: UploadFile) -> List[BarcodeDetectionResult]:
         import io
+        import cv2
         try:
             content = file.file.read()
             file.file.seek(0)
             
             is_pdf = (file.filename and file.filename.lower().endswith(".pdf")) or (file.content_type == "application/pdf")
             
+            found_dict = {}
+            def add_bcs(bcs):
+                for b in bcs:
+                    t = (b.text or "").strip()
+                    if t and t not in found_dict:
+                        found_dict[t] = str(b.format)
+
             if is_pdf:
                 doc = pymupdf.open(stream=content, filetype="pdf")
-                results = []
                 for pno in range(min(len(doc), 2)):
                     page = doc.load_page(pno)
                     pix = page.get_pixmap(dpi=200)
                     img = PIL.Image.open(io.BytesIO(pix.tobytes("png")))
-                    barcodes = zxingcpp.read_barcodes(img)
-                    for b in barcodes:
-                        results.append(BarcodeDetectionResult(text=b.text, format=str(b.format)))
+                    add_bcs(zxingcpp.read_barcodes(img, try_rotate=True, try_downscale=True, try_invert=True))
+                    if len(found_dict) < 2:
+                        for ang in [90, 180, 270]:
+                            rot = img.rotate(ang, expand=True)
+                            add_bcs(zxingcpp.read_barcodes(rot, try_rotate=True))
                 doc.close()
-                return results
             else:
                 img = PIL.Image.open(io.BytesIO(content))
-                barcodes = zxingcpp.read_barcodes(img)
-                return [
-                    BarcodeDetectionResult(text=b.text, format=str(b.format))
-                    for b in barcodes
-                ]
+                # Pass 1: standard with try_rotate and downscale
+                add_bcs(zxingcpp.read_barcodes(img, try_rotate=True, try_downscale=True, try_invert=True))
+                
+                # Pass 2: if fewer than 2 barcodes found, try rotations + adaptive thresholding
+                if len(found_dict) < 2:
+                    for ang in [0, 90, 180, 270]:
+                        rot = img if ang == 0 else img.rotate(ang, expand=True)
+                        try:
+                            gray = cv2.cvtColor(np.array(rot), cv2.COLOR_RGB2GRAY)
+                            thresh = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY, 21, 10)
+                            add_bcs(zxingcpp.read_barcodes(thresh, try_rotate=True))
+                        except Exception:
+                            pass
+                        if len(found_dict) >= 2:
+                            break
+                            
+            return [
+                BarcodeDetectionResult(text=txt, format=fmt)
+                for txt, fmt in found_dict.items()
+            ]
         except Exception:
             return []
 
@@ -758,6 +781,8 @@ class ScanService:
         raw_text_snippet = None
 
         # 1. Barcode / QR Code Detection (All formats)
+        barcode_found = False
+        ocr_found = False
         if mode in ["auto", "barcode", "hybrid"]:
             barcodes = self.detect_barcodes(file)
             extracted.raw_barcodes = barcodes
@@ -785,15 +810,20 @@ class ScanService:
                         if k in ["HN", "H.N.", "PID", "HOSPITAL_NO", "HOSPITALNO"]:
                             extracted.hn = v
                             confidence = max(confidence, 0.99)
-                            mode_used = "barcode"
+                            barcode_found = True
                         # 2. VN / EN (Encounter)
                         elif k in ["VN", "EN", "V.N.", "E.N.", "VISIT", "ENCOUNTER", "VISIT_NO", "VISITNO"]:
-                            extracted.en = v
+                            norm_v = v
+                            if norm_v.upper().startswith("CIP"):
+                                norm_v = "OP" + norm_v[3:]
+                            elif norm_v.upper().startswith("CP"):
+                                norm_v = "OP" + norm_v[2:]
+                            extracted.en = norm_v
                             confidence = max(confidence, 0.99)
-                            mode_used = "barcode"
-                            if v.upper().startswith("OP") or v.upper().startswith("VN"):
+                            barcode_found = True
+                            if norm_v.upper().startswith("OP") or norm_v.upper().startswith("VN"):
                                 extracted.encounter_type = "OPD"
-                            elif v.upper().startswith("IP"):
+                            elif norm_v.upper().startswith("IP"):
                                 extracted.encounter_type = "IPD"
                         # 3. Doctype / Category Type
                         elif k in ["DOCTYPE", "DOC_TYPE", "DOC-TYPE", "CATEGORY", "CAT", "CATEGORY_TYPE", "DOCUMENT_TYPE"]:
@@ -813,7 +843,7 @@ class ScanService:
                                 if not extracted.title or extracted.title.startswith("scan_"):
                                     extracted.title = cat.name_th or cat.name_en
                             confidence = max(confidence, 0.99)
-                            mode_used = "barcode"
+                            barcode_found = True
                         # 4. DOB & dynamic Age calculation
                         elif k in ["DOB", "BIRTHDATE", "BIRTH_DATE", "DATE_OF_BIRTH"]:
                             iso_match = re.search(r'(\d{4})-(\d{1,2})-(\d{1,2})', v)
@@ -846,18 +876,26 @@ class ScanService:
 
                 # B) Standard Single-value Barcode / QR Code
                 else:
-                    if re.match(r'^\d{2}-?\d{2}-?\d{5,6}$', text) or re.match(r'^\d{6,12}$', text):
-                        extracted.hn = text
+                    clean_txt = text.strip()
+                    if re.match(r'^\d{2}-?\d{2}-?\d{5,6}$', clean_txt) or re.match(r'^\d{6,12}$', clean_txt):
+                        extracted.hn = clean_txt
                         confidence = max(confidence, 0.98)
-                        mode_used = "barcode"
-                    elif text.startswith("EN-") or text.startswith("VN-") or text.startswith("OP") or text.startswith("IP") or re.match(r'^\d{2}-?\d{2}-\d{6}$', text):
-                        extracted.en = text
-                        if text.startswith("OP") or text.startswith("VN"):
+                        barcode_found = True
+                    elif clean_txt.startswith("EN-") or clean_txt.startswith("VN-") or clean_txt.startswith("OP") or clean_txt.startswith("IP") or clean_txt.startswith("CP") or clean_txt.startswith("CIP") or re.match(r'^\d{2}-?\d{2}-\d{6}$', clean_txt):
+                        norm_en = clean_txt
+                        if norm_en.startswith("CIP"):
+                            norm_en = "OP" + norm_en[3:]
+                        elif norm_en.startswith("CP"):
+                            norm_en = "OP" + norm_en[2:]
+                        extracted.en = norm_en
+                        barcode_found = True
+                        if norm_en.startswith("OP") or norm_en.startswith("VN"):
                             extracted.encounter_type = "OPD"
-                        elif text.startswith("IP"):
+                        elif norm_en.startswith("IP"):
                             extracted.encounter_type = "IPD"
-                    elif text.startswith("FM-") or text.startswith("DOC-") or text.startswith("SUR-"):
-                        extracted.document_code = text
+                    elif clean_txt.startswith("FM-") or clean_txt.startswith("DOC-") or clean_txt.startswith("SUR-"):
+                        extracted.document_code = clean_txt
+                        barcode_found = True
 
         # 2. Text Extraction & OCR (Supports PDF, JPG, PNG, TIFF, BMP, WEBP, GIF)
         if mode in ["auto", "pdf_text", "ocr", "hybrid"]:
@@ -872,8 +910,7 @@ class ScanService:
                         
                         if len(dig_text.strip()) >= 25 and not has_corruption:
                             extracted_pages.append(dig_text)
-                            if mode_used != "barcode":
-                                mode_used = "pdf_text"
+                            ocr_found = True
                             confidence = max(confidence, 0.95)
                         else:
                             ocr = get_ocr_engine()
@@ -883,8 +920,7 @@ class ScanService:
                                 ocr_page_text = ocr_extract_with_auto_orientation(ocr, pil_img)
                                 if ocr_page_text:
                                     extracted_pages.append(ocr_page_text)
-                                    if mode_used != "barcode":
-                                        mode_used = "ocr"
+                                    ocr_found = True
                                     confidence = max(confidence, 0.90)
 
                     page_text = "\n\n".join(extracted_pages)
@@ -899,11 +935,25 @@ class ScanService:
                         pil_img = PIL.Image.open(io.BytesIO(content)).convert("RGB")
                         page_text = ocr_extract_with_auto_orientation(ocr, pil_img)
                         if page_text:
-                            if mode_used != "barcode":
-                                mode_used = "ocr"
+                            ocr_found = True
                             confidence = max(confidence, 0.90)
                 except Exception as e:
                     print(f"Image OCR error: {e}")
+
+        THAI_MONTHS_MAP = {
+            'ม.ค.': 1, 'มกราคม': 1, 'มค': 1,
+            'ก.พ.': 2, 'กุมภาพันธ์': 2, 'กพ': 2,
+            'มี.ค.': 3, 'มีนาคม': 3, 'มีค': 3,
+            'เม.ย.': 4, 'เมษายน': 4, 'เมย': 4,
+            'พ.ค.': 5, 'พฤษภาคม': 5, 'พค': 5,
+            'มิ.ย.': 6, 'มิถุนายน': 6, 'มิย': 6,
+            'ก.ค.': 7, 'กรกฎาคม': 7, 'กค': 7,
+            'ส.ค.': 8, 'สิงหาคม': 8, 'สค': 8,
+            'ก.ย.': 9, 'กันยายน': 9, 'กย': 9,
+            'ต.ค.': 10, 'ตุลาคม': 10, 'ตค': 10,
+            'พ.ย.': 11, 'พฤศจิกายน': 11, 'พย': 11,
+            'ธ.ค.': 12, 'ธันวาคม': 12, 'ธค': 12,
+        }
 
         if page_text:
             raw_text_snippet = page_text[:500]
@@ -928,26 +978,38 @@ class ScanService:
             # B) Extract VN / EN (Encounter)
             if not extracted.en:
                 en_match = re.search(
-                    r'(?:EN|VN|E\.N\.|V\.N\.|Encounter|Visit\s*No\.?)\s*[:.\s\r\n]*([0-9]{2}-?[0-9]{2}-?[0-9]{5,6}|[0-9]{6,12}|OP[0-9]{3,8}|IP[0-9]{3,8})',
+                    r'\b((?:OP|IP|VN|EN|CP|CIP)[0-9]{5,15})\b',
                     page_text,
                     re.IGNORECASE
                 )
                 if not en_match:
-                    en_match = re.search(r'\b(OP[0-9]{3,8}|IP[0-9]{3,8})\b', page_text, re.IGNORECASE)
+                    en_match = re.search(
+                        r'(?:EN|VN|E\.N\.|V\.N\.|Encounter|Visit\s*No\.?|เลขที่บริการ)\s*[:.\s\r\n]*([0-9]{2}-?[0-9]{2}-?[0-9]{5,8}|[0-9]{6,15}|(?:OP|IP|VN|EN|CP|CIP)[0-9]{5,15})',
+                        page_text,
+                        re.IGNORECASE
+                    )
                 if not en_match:
                     en_match = re.search(r'\b(0[0-9]-[0-9]{2}-[0-9]{6})\b', page_text)
                 if en_match:
-                    extracted.en = en_match.group(1).strip()
+                    norm_en = en_match.group(1).strip()
+                    if norm_en.upper().startswith("CIP"):
+                        norm_en = "OP" + norm_en[3:]
+                    elif norm_en.upper().startswith("CP"):
+                        norm_en = "OP" + norm_en[2:]
+                    extracted.en = norm_en
+                    if norm_en.upper().startswith("OP") or norm_en.upper().startswith("VN"):
+                        extracted.encounter_type = "OPD"
+                    elif norm_en.upper().startswith("IP"):
+                        extracted.encounter_type = "IPD"
 
             # C) Extract Patient Name (Prioritize Thai script and prefixes, then English)
-            # Stop keywords when patient name is on the same line with other labels
-            stop_keywords = r'(?:HN|H\.N\.|VN|EN|อายุ|Age|วัน\s*เดือน\s*ปี\s*เกิด|วันเกิด|DOB|Date\s*of\s*Birth|เพศ|Sex|Gender|เตียง|Bed|แผนก|Dept|Ward|Doctor|แพทย์)'
+            stop_keywords = r'(?:HN|H\.N\.|VN|EN|PID|Name|Patient\s*Name|English|ENG|อายุ|Age|วัน\s*เดือน\s*ปี\s*เกิด|วันเกิด|DOB|Date\s*of\s*Birth|เพศ|Sex|Gender|เตียง|Bed|แผนก|Dept|Ward|Doctor|แพทย์)'
 
             thai_name = None
 
-            # 1. Match label style FIRST (More explicit and reliable on clinical forms): ชื่อ - สกุล, ชื่อผู้ป่วย, ชื่อ
+            # 1. Match label style FIRST: ชื่อ - สกุล, ชื่อผู้ป่วย, ชื่อ, ซื่อ
             lbl_th_match = re.search(
-                r'(?:ชื่อ\s*[-–—]?\s*(?:สกุล|นามสกุล)|ชื่อผู้ป่วย|ชื่อ)\s*[:.\s-]*([^\r\n|]+)',
+                r'(?:ชื่อ\s*[-–—]?\s*(?:สกุล|นามสกุล)|ชื่อผู้ป่วย|ชื่อ|ซื่อ)\s*[:.\s-]*([^\r\n|]+)',
                 page_text
             )
             if lbl_th_match:
@@ -975,7 +1037,7 @@ class ScanService:
             # 3. Match English Name
             en_name = None
             en_match = re.search(
-                r'(?:Name|Patient\s*Name)\s*[:.\s]*([A-Z][A-Za-z]+(?:\s+[A-Z][A-Za-z]+){1,3})',
+                r'(?:Name|Patient\s*Name)\s*[:.\s]*([A-Za-z]+(?:[^\S\r\n]+[A-Za-z]+){1,3})',
                 page_text,
                 re.IGNORECASE
             )
@@ -987,6 +1049,9 @@ class ScanService:
                         en_name = cand
             else:
                 en_name = en_match.group(1).strip()
+
+            if en_name:
+                en_name = re.split(r'[\r\n]|\s+(?:HN|PID|VN|EN|Age|Sex)', en_name, flags=re.IGNORECASE)[0].strip()
 
             if thai_name:
                 extracted.name_th = thai_name
@@ -1000,7 +1065,7 @@ class ScanService:
                 elif en_name:
                     extracted.name = en_name
 
-            # D) Extract Date of Birth (DOB) and Visit Date
+            # D) Extract Date of Birth (DOB)
             dob_thai_match = re.search(
                 r'(?:วัน\s*เดือน\s*ปี\s*เกิด|Date\s*of\s*Birth|DOB|[Vv]?[/I]?[0-9]?[/I]?\s*เกิด|[Vv]/[0O]/[ปU]\s*เกี?ค?|เกิด)[\s\S]{0,40}?([0-9]{1,2})\s*([^\s]{2,8}?)\s*(25[0-9]{1,2}|19[0-9]{2}|20[0-9]{2})',
                 page_text,
@@ -1019,10 +1084,45 @@ class ScanService:
                 norm_y = f"{raw_y}5" if len(raw_y) == 3 else raw_y
                 extracted.dob = f"{d_day:02d} {norm_month} {norm_y}"
 
+            # D2) Extract Visit Date from text
+            if not extracted.visit_date:
+                # 1. Look for labeled date (Print Date, Visit Date, Date, วันที่, วันตรวจ, วันเข้ารับบริการ)
+                vdate_match = re.search(
+                    r'(?:Print\s*Date|Visit\s*Date|Date|วันที่|วันตรวจ|วันเข้ารับบริการ|รับบริการ|พิมพ์เมื่อ)\s*[:.\s]*([0-9]{1,2})\s*([^\s0-9]{2,10})\s*(25[0-9]{2}|20[0-9]{2})',
+                    page_text,
+                    re.IGNORECASE
+                )
+                if vdate_match:
+                    d = int(vdate_match.group(1))
+                    m_str = vdate_match.group(2).strip()
+                    y = int(vdate_match.group(3))
+                    m = THAI_MONTHS_MAP.get(m_str)
+                    if not m:
+                        for k, v in THAI_MONTHS_MAP.items():
+                            if k in m_str or m_str in k:
+                                m = v
+                                break
+                    m = m or 1
+                    y_ce = y - 543 if y > 2400 else y
+                    extracted.visit_date = f"{y_ce:04d}-{m:02d}-{d:02d}"
+                else:
+                    # 2. Look for numeric dates DD/MM/YYYY or DD-MM-YYYY
+                    vdate_num = re.search(
+                        r'(?:Print\s*Date|Visit\s*Date|Date|วันที่|วันตรวจ)\s*[:.\s]*([0-9]{1,2})[/-]([0-9]{1,2})[/-](25[0-9]{2}|20[0-9]{2})',
+                        page_text,
+                        re.IGNORECASE
+                    )
+                    if vdate_num:
+                        d = int(vdate_num.group(1))
+                        m = int(vdate_num.group(2))
+                        y = int(vdate_num.group(3))
+                        y_ce = y - 543 if y > 2400 else y
+                        extracted.visit_date = f"{y_ce:04d}-{m:02d}-{d:02d}"
+
             # E) Extract Age (or compute from DOB)
             if not extracted.age:
                 age_match = re.search(
-                    r'(?:อายุ|Age|อา|อาย)\s*[:.\s]*([0-9]{1,3})\s*(?:ปี|ง|ขวบ|y|yr)?',
+                    r'(?:อายุ|Age|อา|อาย|ธายุ)\s*[:.\s]*([0-9]{1,3})\s*(?:ปี|ง|ขวบ|y|yr)?',
                     page_text,
                     re.IGNORECASE
                 )
@@ -1039,13 +1139,19 @@ class ScanService:
                         if 0 <= calc_age <= 120:
                             extracted.age = f"{calc_age} ปี"
 
-            # E2) Extract Time of Visit from text (e.g. 16:30น., 16:30:00, 14:20 น.)
+            # E2) Extract Time of Visit from text (e.g. 16:30น., 16:30:00, 14:20 น. or attached to Print Date)
             if not extracted.visit_time:
                 time_match = re.search(
                     r'(?:เวลา|Time|เมื่อ|at)?\s*([01]?[0-9]|2[0-3])[:.]([0-5][0-9])(?::([0-5][0-9]))?\s*(?:น\.|น\b|hrs?\b)',
                     page_text,
                     re.IGNORECASE
                 )
+                if not time_match:
+                    time_match = re.search(
+                        r'(?:Print\s*Date|Date|วันที่)[^\n\r]*?\s+([01]?[0-9]|2[0-3])[:.]([0-5][0-9])(?::([0-5][0-9]))?',
+                        page_text,
+                        re.IGNORECASE
+                    )
                 if time_match:
                     h = int(time_match.group(1))
                     m = int(time_match.group(2))
@@ -1086,9 +1192,9 @@ class ScanService:
 
             cat_code = None
             if "ยินยอม" in page_text or "consent" in text_lower or "consent" in fn_lower or "CONSENT" in doc_code_upper:
-                cat_code = "CONSENT"
+                cat_code = "CONSENT-GEN"
             elif "เวชระเบียน" in page_text or "ผู้ป่วยใหม่" in page_text or "registration" in text_lower or "reg" in fn_lower:
-                cat_code = "REG"
+                cat_code = "OPD-NOTE"
             elif (
                 "ประวัติการรักษา" in page_text
                 or "opd record" in text_lower
@@ -1104,13 +1210,13 @@ class ScanService:
                 or "SURG" in doc_code_upper
                 or "PROGRESS" in doc_code_upper
             ):
-                cat_code = "MED_RECORD"
+                cat_code = "OPD-NOTE"
             elif "lab" in text_lower or "lab" in fn_lower or "ห้องปฏิบัติการ" in page_text or "LAB" in doc_code_upper:
-                cat_code = "LAB"
+                cat_code = "LAB-RESULT"
             elif "x-ray" in text_lower or "xray" in text_lower or "xray" in fn_lower or "รังสี" in page_text or "XRAY" in doc_code_upper:
-                cat_code = "XRAY"
+                cat_code = "RAD-REPORT"
             elif "ยา" in page_text or "pharmacy" in text_lower or "pharm" in fn_lower or "PHARM" in doc_code_upper:
-                cat_code = "PHARMACY"
+                cat_code = "MED-ORDER"
             elif "ทรัพย์สิน" in page_text or "property" in text_lower or "deposit" in fn_lower or "RT_COMMON" in doc_code_upper:
                 cat_code = "PROPERTY"
             elif "ประกัน" in page_text or "สิทธิ" in page_text or "insurance" in text_lower:
@@ -1119,7 +1225,16 @@ class ScanService:
                 cat_code = "FINANCE"
 
             if cat_code and not extracted.category_id:
-                category = db.query(DocumentCategory).filter(DocumentCategory.code == cat_code).first()
+                category = db.query(DocumentCategory).filter(
+                    (DocumentCategory.code == cat_code) |
+                    (DocumentCategory.code.ilike(f"{cat_code}%")) |
+                    (DocumentCategory.name_en.ilike(f"%{cat_code}%"))
+                ).first()
+                if not category and cat_code == "OPD-NOTE":
+                    category = db.query(DocumentCategory).filter(
+                        (DocumentCategory.code.ilike("OPD%")) |
+                        (DocumentCategory.name_th.ilike("%ผู้ป่วยนอก%"))
+                    ).first()
                 if category:
                     extracted.category_id = category.id
                     extracted.category_code = category.code
@@ -1138,19 +1253,24 @@ class ScanService:
             if not extracted.doctor_name:
                 # 1. Department comma doctor (e.g. อายุรกรรม , DOCTOR YANHEE , Cath Lab)
                 doc_dept_match = re.search(
-                    r'(?:อายุรกรรม|ศัลยกรรม|กุมาร|สูติ)[^,\n\r]*,\s*(DOCTOR\s+[A-Za-z]+|นพ\.[^\r\n,]+|พญ\.[^\r\n,]+)',
+                    r'(?:อายุรกรรม|ศัลยกรรม|กุมาร|สูติ)[^,\n\r]*,\s*(DOCTOR\s+[A-Za-z0-9_-]+|นพ\.[^\r\n,]+|พญ\.[^\r\n,]+)',
                     page_text,
                     re.IGNORECASE
                 )
                 if doc_dept_match:
-                    extracted.doctor_name = doc_dept_match.group(1).strip()
+                    cand = doc_dept_match.group(1).strip()
+                    if re.search(r'YAN[Ee4]+', cand, re.IGNORECASE):
+                        cand = "DOCTOR YANHEE"
+                    extracted.doctor_name = cand
 
                 # 2. DOCTOR FIRSTNAME LASTNAME pattern
                 if not extracted.doctor_name:
-                    doc_upper_match = re.search(r'\b(DOCTOR\s+[A-Z]{3,20}(?:\s+[A-Z]{3,20})?)\b', page_text)
+                    doc_upper_match = re.search(r'\b(DOCTOR\s+[A-Za-z0-9_-]+(?:\s+[A-Za-z0-9_-]+)?)\b', page_text)
                     if doc_upper_match:
                         cand = doc_upper_match.group(1).strip()
                         if not any(b in cand for b in ["HOSPITAL", "CLINIC"]):
+                            if re.search(r'YAN[Ee4]+', cand, re.IGNORECASE):
+                                cand = "DOCTOR YANHEE"
                             extracted.doctor_name = cand
 
                 # 3. Standard prefixes: นพ., พญ., Dr., แพทย์
@@ -1243,9 +1363,16 @@ class ScanService:
                 if not extracted.encounter_type and encounter.encounter_type:
                     extracted.encounter_type = encounter.encounter_type
 
-        # Default title if still empty
-        if not extracted.title and file.filename:
-            extracted.title = os.path.splitext(file.filename)[0]
+        # Determine final mode_used accurately
+        if barcode_found and ocr_found:
+            mode_used = "hybrid"
+            confidence = max(confidence, 0.99)
+        elif barcode_found:
+            mode_used = "barcode"
+        elif ocr_found:
+            mode_used = "ocr" if not is_pdf else "pdf_text"
+        else:
+            mode_used = "auto"
 
         return ExtractionResponse(
             status="success",
