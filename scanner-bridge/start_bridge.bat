@@ -1,8 +1,7 @@
 @echo off
-chcp 65001 >nul
 title Yanhee DMS - Scanner Bridge Service (Test Mode)
 echo ========================================================
-echo   Yanhee DMS - Scanner Bridge Service (โหมดทดสอบ)
+echo   Yanhee DMS: Scanner Bridge Service (Test Mode)
 echo ========================================================
 cd /d "%~dp0"
 pip install -r requirements.txt --quiet
