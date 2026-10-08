@@ -466,6 +466,12 @@ External hospital vendors (e.g., outsourced lab centers, imaging clinics, specia
   - Filters out redundant eSCL network endpoints when a native WIA driver exists for the same device name.
   - Strict scanner target matching: matches by device ID, normalized backslash/slash path, and device name, ensuring the user's selected scanner in the DMS top bar is always used rather than the Windows system default printer/scanner.
   - High-contrast dropdown styles (`data-highlighted:bg-blue-600 data-highlighted:text-white`) prevent unreadable black-on-black hover states in Radix Combobox.
+- **Workstation Auto-Start & Zero-Intervention Execution**:
+  - Medical staff should NOT be expected to manually run batch files or see black console windows every morning.
+  - **`install_autostart.bat`**: 1-click installer that places a shortcut in `%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\`.
+  - **`run_silent.vbs`**: Executes `python -m uvicorn scan_bridge:app --host 127.0.0.1 --port 18000` via Windows Script Host with window style `0` (Completely hidden/silent background process).
+  - Automatically boots with Windows; users never see a CMD popup and cannot accidentally close it.
+  - **`stop_bridge.bat` & `uninstall_autostart.bat`**: Utility scripts to cleanly terminate port 18000 processes and unregister startup shortcuts.
 
 ### 11.2 High-Performance Thai OCR Engine & Dependency Integrity
 - **Engine**: PaddleOCR Thai ONNX Recognition Model (`backend/models/ocr/thai/rec.onnx` + `dict.txt`) loaded via `RapidOCR`.

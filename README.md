@@ -209,6 +209,9 @@ bun run dev --port 3000
 * **WIA Automation**: ตัว Bridge ทำงานเป็น FastAPI daemon บนเครื่อง Client คุยกับ Windows WIA Driver (`win32com.client.Dispatch("WIA.DeviceManager")`)
 * **เจาะจงเครื่องสแกนที่เลือก**: ส่งคำสั่งไปยัง Device ID และชื่อเครื่องที่ผู้ใช้งานเลือกใน Top Bar โดยตรง (เช่น EPSON Perfection V39) ไม่สับสนกับ Default Printer ใน Windows
 * **ป้องกันอุปกรณ์ซ้ำซ้อน**: กรองไดรเวอร์ eSCL Network ที่ซ้ำกับ Native WIA Driver ป้องกันปัญหาชื่อเครื่องเบิ้ล
+* **ระบบทำงานเบื้องหลังอัตโนมัติ (Zero-Intervention Auto-Start)**:
+  * ติดตั้งครั้งเดียวที่เครื่องหน้างานด้วย `scanner-bridge/install_autostart.bat` ระบบจะรันอัตโนมัติในพื้นหลังทุกครั้งที่เปิดเครื่อง Windows (ผ่าน `run_silent.vbs`)
+  * เจ้าหน้าที่ไม่ต้องคอยดับเบิลคลิกเปิดเอง และไม่มีหน้าต่างดำ CMD ปรากฏกวนใจหรือเผลอกดปิดระหว่างวัน
 
 ### 2. ระบบอ่านข้อความภาษาไทยด้วย AI OCR (PaddleOCR ONNX Thai Model) & Hybrid Engine
 * **โมเดลภาษาไทยเฉพาะทาง**: ติดตั้ง PaddleOCR Thai ONNX Model ใน `backend/models/ocr/thai/rec.onnx` และ `dict.txt` ขับเคลื่อนด้วย `RapidOCR` + `ONNXRuntime`
