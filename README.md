@@ -118,8 +118,11 @@ bun install
 bun run dev --port 3000
 ```
 
-### 🔗 ลิงก์การใช้งานระบบ (Direct URLs):
-* **หน้าเปิดดูเวชระเบียนคนไข้**: [http://localhost:3000/view?hn=08-24-00030](http://localhost:3000/view?hn=08-24-00030)
+### 🔗 ลิงก์และการเชื่อมต่อระบบ (Direct URLs & iFrame Integration):
+* **หน้าเปิดดูเวชระเบียนคนไข้ (Dynamic URL Parameters)**:
+  * **เรียกตรงผ่าน `/view`**: `http://localhost:3000/view?hn={HN}&visitId={VN/EN}&user={Staff_ID}`
+  * **เรียกผ่าน Root `/` (iFrame Integration)**: `http://localhost:3000/?patientId={PID}&hn={HN}&visitId={VN/EN}` (ระบบจะ Forward พารามิเตอร์ทั้งหมดต่อไปยัง `/view` อัตโนมัติ รองรับทั้ง `hn`, `visitId`, `vn`, `en`, `patientId`, `user`)
+  * **Zero Hardcoded Fallback**: ปราศจากค่า Mock HN แข็ง ป้องกันการแสดงประวัติผิดคน (Wrong Patient Error) และสอดคล้องกับมาตรฐานความปลอดภัย PDPA (หากไม่มี `hn` แนบมาระบบจะแสดง Empty State แจ้งเตือนอย่างปลอดภัย)
 * **หน้าจอสแกนและนำเข้าเอกสาร**: [http://localhost:3000/scan](http://localhost:3000/scan)
 
 ---

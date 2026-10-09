@@ -21,7 +21,7 @@ export function useDocumentTree(hn: string, initialUserId: string = "Staff") {
   const [doctorCode, setDoctorCode] = useState<string>("");
   const [selectedDocId, setSelectedDocId] = useState<string | null>(null);
   const [currentDocument, setCurrentDocument] = useState<DocumentItem | null>(null);
-  const [loadingTree, setLoadingTree] = useState<boolean>(true);
+  const [loadingTree, setLoadingTree] = useState<boolean>(Boolean(hn));
   const [loadingDoc, setLoadingDoc] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -32,7 +32,13 @@ export function useDocumentTree(hn: string, initialUserId: string = "Staff") {
 
   // Fetch document tree when parameters change
   const fetchTree = useCallback(async () => {
-    if (!hn) return;
+    if (!hn) {
+      setLoadingTree(false);
+      setTreeData(null);
+      setSelectedDocId(null);
+      setCurrentDocument(null);
+      return;
+    }
     setLoadingTree(true);
     setError(null);
     try {

@@ -115,12 +115,17 @@ Hospital clinicians, nurses, and medical record officers require an uncluttered,
   - All button labels must have `whitespace-nowrap` to prevent awkward 2-line wrapping that balloons button height into bulky square blocks.
   - Buttons must be compact (`py-1`, `text-[11px] font-medium`), flat, and modern.
 
-### 2.3 Clean Production URL Architecture
-- The application URL must be strictly minimal:
-  **`http://localhost:3000/view?hn={HN}`** (e.g. `/view?hn=08-24-00030`)
-- Never push dummy persona query parameters (`&user=...&role=...`) into the browser address bar.
-- Remove all dummy persona switcher dropdowns from the UI to ensure enterprise production readiness.
-- Internal fallback (`user = "Staff"`) handles watermark stamps and audit logs gracefully without URL pollution.
+### 2.3 Clean Production URL Architecture & iFrame Integration
+- The application URL is purely dynamic and accepts external integration parameters:
+  - **Direct Viewer**: `http://localhost:3000/view?hn={HN}&visitId={VN/EN}&user={Staff_ID}`
+  - **iFrame from HIS (Arcus Air / Root Path)**: `http://localhost:3000/?patientId={PID}&hn={HN}&visitId={VN/EN}`
+  - The root path (`/`) automatically forwards all incoming query parameters to `/view`.
+- Supported dynamic query parameters:
+  - `hn`: Patient Hospital Number (e.g. `000000017`).
+  - `visitId` / `vn` / `en`: Patient Encounter / Visit ID (e.g. `IP26080000034`).
+  - `patientId`: Optional HIS patient identifier.
+  - `user` / `userId`: Staff/doctor ID for dynamic watermark stamping and audit trail logs.
+- **Zero Hardcoded Fallback**: The mock patient HN (`08-24-00030`) fallback is strictly removed. If no `hn` is supplied in the URL, a clean, hospital-grade Empty State is displayed to prevent accidental display of the wrong patient's chart (Wrong Patient Safety Violation) and ensure PDPA compliance.
 
 ### 2.4 Mandatory shadcn/ui Component Architecture
 - **Every UI/UX design workflow must execute**:

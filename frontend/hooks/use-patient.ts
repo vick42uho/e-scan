@@ -7,11 +7,14 @@ import { patientApi } from "@/services/patient-api";
 export function usePatient(initialHn: string) {
   const [hn, setHn] = useState<string>(initialHn);
   const [patient, setPatient] = useState<Patient | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState<boolean>(Boolean(initialHn));
   const [error, setError] = useState<string | null>(null);
 
   const fetchPatient = useCallback(async (targetHn: string) => {
-    if (!targetHn) return;
+    if (!targetHn) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
@@ -29,6 +32,8 @@ export function usePatient(initialHn: string) {
   useEffect(() => {
     if (initialHn) {
       fetchPatient(initialHn);
+    } else {
+      setLoading(false);
     }
   }, [initialHn, fetchPatient]);
 
