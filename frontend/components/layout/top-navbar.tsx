@@ -17,6 +17,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { ModeToggle } from "@/components/mode-toggle";
+import { YanheeLogo } from "@/components/common/yanhee-logo";
 import { Patient } from "@/types/patient";
 
 export interface UserPersona {
@@ -69,11 +70,7 @@ export function TopNavbar({
 
           <div className="flex items-center gap-2.5">
             {/* Yanhee Medical Emblem */}
-            <div className="h-8 w-8 rounded-lg bg-white flex items-center justify-center shadow-xs p-1">
-              <div className="h-full w-full rounded flex items-center justify-center text-blue-900 font-extrabold text-sm bg-blue-50">
-                YH
-              </div>
-            </div>
+            <YanheeLogo size="md" />
 
             <div>
               <div className="flex items-center gap-1.5">

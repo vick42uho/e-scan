@@ -8,7 +8,8 @@ import { useViewerControls } from "@/hooks/use-viewer-controls";
 import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts";
 import { ViewerLayout } from "@/components/layout/viewer-layout";
 import { DocumentCategoryType } from "@/types/document";
-import { Loader2, FileQuestion } from "lucide-react";
+import { Loader2 } from "lucide-react";
+import { YanheeLogo } from "@/components/common/yanhee-logo";
 
 function EscanViewerContent() {
   const searchParams = useSearchParams();
@@ -75,9 +76,7 @@ function EscanViewerContent() {
     return (
       <div className="h-screen w-screen flex flex-col items-center justify-center bg-slate-100 dark:bg-slate-950 text-slate-800 dark:text-slate-100 p-6 select-none">
         <div className="flex flex-col items-center max-w-md w-full text-center p-8 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-lg transition-all">
-          <div className="w-16 h-16 rounded-2xl bg-amber-500/10 dark:bg-amber-400/10 flex items-center justify-center mb-5 text-amber-600 dark:text-amber-400 border border-amber-500/20">
-            <FileQuestion className="w-8 h-8" />
-          </div>
+          <YanheeLogo size="xl" className="mb-5" />
           <h2 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white mb-2">
             ไม่พบหมายเลขผู้ป่วย (HN)
           </h2>

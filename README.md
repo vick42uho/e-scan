@@ -38,6 +38,9 @@ DMS/
 ├── frontend/                      # Next.js 16 + TypeScript + Tailwind CSS (Turbopack)
 │   ├── app/
 │   │   ├── layout.tsx             # Root Layout พร้อมฟอนต์ Sarabun / TH Sarabun PSK แบบ Local 100%
+│   │   ├── icon.svg               # Web App Favicon แบบเวกเตอร์ คมชัดระดับ 4K
+│   │   ├── apple-icon.svg         # Apple Touch Icon สำหรับ iPad และอุปกรณ์พกพา
+│   │   ├── manifest.ts            # Next.js Web App Manifest (PWA Installable)
 │   │   ├── view/page.tsx          # หน้าจอเปิดดูเวชระเบียน (?hn=...)
 │   │   └── scan/page.tsx          # หน้าจอสแกนและนำเข้าเอกสารเวชระเบียน (/scan)
 │   ├── components/
@@ -46,7 +49,7 @@ DMS/
 │   │   ├── scan/                  # ScanForm, ScanPreviewCanvas, ScanTopBar, ScanActions, SaveFeedbackDialog
 │   │   ├── viewer/                # DocumentViewerCanvas, ViewerToolbar, ViewerHeader, ThumbnailStrip, PrintDialog
 │   │   ├── sidebar/               # EscanSidebar, PatientProfileCard, DocumentGroupFilter, DocumentTreeView
-│   │   ├── common/                # Reusable Components (EmptyState, StatusPill, LoadingSkeleton)
+│   │   ├── common/                # Reusable Components (YanheeLogo, EmptyState, StatusPill, LoadingSkeleton)
 │   │   └── layout/                # TopNavbar, ViewerLayout (Responsive 3-Column + Drawers)
 │   ├── hooks/                     # Custom Hooks (usePatient, useDocumentTree, useViewerControls, useKeyboardShortcuts)
 │   ├── services/                  # API Fetching Layer (patientApi, documentApi, scanApi)
@@ -90,6 +93,15 @@ DMS/
 * ติดตั้งปุ่ม **`ModeToggle`** ไว้ที่ขวาสุดของ `TopNavbar` (หน้าดูเวชระเบียน) และ `ScanTopBar` (หน้าสแกนเอกสาร)
 * **คลิกเดียวสลับโหมดทันที**: ไม่ต้องเปิดเมนูหลายขั้นตอน คลิก 1 ครั้งเปลี่ยนเป็นโหมดมืด คลิกอีกครั้งเปลี่ยนกลับเป็นโหมดสว่างทันที พร้อมไอคอน Sun (ดวงอาทิตย์) และ Moon (พระจันทร์) หมุนเปลี่ยนนุ่มนวล
 * **รองรับคีย์ลัด**: สามารถกดปุ่ม **`D`** บนคีย์บอร์ดเพื่อสลับโหมดได้ตลอดเวลา
+
+### 7. อัตลักษณ์ระบบและไอคอนแอปเว็บ (System Branding & Web App Icons)
+* **โลโก้ระบบและตราสัญลักษณ์ (YanheeLogo)**:
+  * ออกแบบคอมโพเนนต์ SVG มาตรฐาน [YanheeLogo](frontend/components/common/yanhee-logo.tsx) ผสมผสาน **กางเขนการแพทย์ (Medical Cross)** สื่อถึงความน่าเชื่อถือตามมาตรฐาน JCI, **แผ่นเวชระเบียนพับมุม (Folded Chart)** สื่อถึงประวัติผู้ป่วย และ **ลำแสงเลเซอร์สแกนเนอร์เรืองแสง (Cyan Laser Scan Beam)** สื่อถึงความรวดเร็วของ e-Scan ดิจิทัล
+  * คมชัดระดับ 4K / Retina Display ปรับขนาดได้ยืดหยุ่น (`xs` ถึง `xl`) แสดงผลใน `TopNavbar`, `ScanTopBar` และหน้า Empty State
+* **ไอคอนแอปเว็บและ Favicon เวกเตอร์ระดับสูง**:
+  * `frontend/app/icon.svg` & `frontend/public/favicon.svg`: Vector Favicon คมชัดทุกขนาดหน้าจอ
+  * `frontend/app/apple-icon.svg`: Apple Touch Icon สำหรับ Bookmark และแท็บเล็ต iPad หน้างาน
+  * `frontend/app/manifest.ts`: ติดตั้งเป็น Progressive Web App (PWA) ได้ทันทีบนเครื่องหน้างานและ PC ของแพทย์
 
 ---
 

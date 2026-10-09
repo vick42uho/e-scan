@@ -53,6 +53,13 @@ const fontSarabun = localFont({
 export const metadata: Metadata = {
   title: "Yanhee e-Scan System v3.1 (Secured) | โรงพยาบาลยันฮี",
   description: "ระบบจัดเก็บและเปิดดูเอกสารเวชระเบียนสแกน โรงพยาบาลยันฮี (DMS)",
+  icons: {
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/favicon.svg", type: "image/svg+xml" },
+    ],
+    apple: [{ url: "/apple-icon.svg", type: "image/svg+xml" }],
+  },
 };
 
 export default function RootLayout({

@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/combobox';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { ModeToggle } from '@/components/mode-toggle';
+import { YanheeLogo } from '@/components/common/yanhee-logo';
 import type { ScannerDevice } from '@/types/scan';
 
 interface ScanTopBarProps {
@@ -43,11 +44,7 @@ export function ScanTopBar({ bridgeStatus, devices, selectedDeviceId, onSelectDe
       <header className="h-14 bg-gradient-to-r from-blue-950 via-blue-900 to-indigo-950 text-white px-3 sm:px-4 flex items-center justify-between shadow-md select-none shrink-0 z-30 border-b border-blue-800/40">
         {/* Left: Hospital Brand & Module Title */}
         <div className="flex items-center gap-2.5">
-          <div className="h-8 w-8 rounded-lg bg-white flex items-center justify-center shadow-xs p-1 shrink-0">
-            <div className="h-full w-full rounded flex items-center justify-center text-blue-900 font-extrabold text-sm bg-blue-50">
-              YH
-            </div>
-          </div>
+          <YanheeLogo size="md" className="shrink-0" />
 
           <div>
             <div className="flex items-center gap-2">

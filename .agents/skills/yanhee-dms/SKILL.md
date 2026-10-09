@@ -218,6 +218,15 @@ Hospital clinicians, nurses, and medical record officers require an uncluttered,
 - **Global Hotkey Synergy**: Synchronized with `ThemeHotkey` in `theme-provider.tsx` (pressing `D` key on the keyboard toggles the theme anytime the user is not focused on an input).
 - **Safe Hydration**: Implements a client `mounted` check to eliminate React 19 hydration mismatch warnings.
 
+### 2.12 Yanhee Medical Branding, Logo & Web App Icons
+- **Brand Component**: Use `@/components/common/yanhee-logo` (`<YanheeLogo size="xs" | "sm" | "md" | "lg" | "xl" />`).
+- Never use crude raw text placeholders (like `YH` in a white square) in headers or banners.
+- Features: Medical Cross + Folded Medical Chart + Cyan Glowing Laser Scan Beam inside an enterprise squircle with drop-shadow glow.
+- **Web App Favicons & PWA**:
+  - `frontend/app/icon.svg` & `frontend/public/favicon.svg` provide resolution-independent 4K vector favicons.
+  - `frontend/app/apple-icon.svg` provides mobile and tablet homescreen icon.
+  - `frontend/app/manifest.ts` provides PWA installation capability.
+
 ---
 
 ## 3. Multi-Level Hierarchical Tree Structure
