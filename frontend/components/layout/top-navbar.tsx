@@ -16,6 +16,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { ModeToggle } from "@/components/mode-toggle";
 import { Patient } from "@/types/patient";
 
 export interface UserPersona {
@@ -138,6 +139,9 @@ export function TopNavbar({
               {isFullscreen ? "ออกจากโหมดเต็มหน้าจอ" : "โหมดเต็มหน้าจอ"}
             </TooltipContent>
           </Tooltip>
+
+          {/* Theme Toggle Button (1-Click Toggle: Dark <-> Light) */}
+          <ModeToggle />
         </div>
       </header>
     </TooltipProvider>

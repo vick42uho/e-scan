@@ -50,7 +50,7 @@ The **Yanhee e-Scan System (DMS)** is the mission-critical hospital document man
 |     * Native Touch Gestures: 1-finger touch pan, horizontal swipe for Prev/Next, double-tap zoom   |
 |     * Mobile Toolbar single-row layout with `overflow-x-auto no-scrollbar`                        |
 |   - Right: ThumbnailStrip - Desktop width 192-224px (w-48 sm:w-52 md:w-56) with active A4 card   |
-|   - Top: TopNavbar - Yanhee branding ("Yanhee e-Scan v3.1"), online status badge, fullscreen      |
+|   - Top: TopNavbar - Yanhee branding ("Yanhee e-Scan v3.1"), online status badge, fullscreen, 1-click ModeToggle|
 |   - Dialogs: PrintDialog - Secured print workflow with mandatory audit logging                    |
 +-------------------------------------------------+-------------------------------------------------+
                                                   | REST APIs (/api/v1/*)
@@ -205,6 +205,13 @@ Hospital clinicians, nurses, and medical record officers require an uncluttered,
 ### 2.10 Right Thumbnail Strip Ergonomics & Anti-Clipping
 - Desktop thumbnail strip width must be `w-48 sm:w-52 md:w-56` (192-224px).
 - Thumbnail cards must use `box-border overflow-hidden` and `ring-1` with proper padding (`p-2.5 pr-3.5`) so A4 preview cards, page numbers, titles, and vertical scrollbars are never clipped on the right edge.
+
+### 2.11 1-Click Dark/Light Theme Switching Standard (`ModeToggle`)
+- Placed prominently at the far right of `TopNavbar` (next to the fullscreen button) and `ScanTopBar` (next to the back button).
+- **1-Click Instant Action**: Unlike standard multi-click dropdowns, a single click immediately toggles between Dark mode and Light mode with smooth Sun/Moon icon animations.
+- **Icon Feedback**: Shows an animated golden `Sun` in Light mode (clicking transitions to Dark mode) and a cool blue/white `Moon` in Dark mode (clicking transitions to Light mode).
+- **Global Hotkey Synergy**: Synchronized with `ThemeHotkey` in `theme-provider.tsx` (pressing `D` key on the keyboard toggles the theme anytime the user is not focused on an input).
+- **Safe Hydration**: Implements a client `mounted` check to eliminate React 19 hydration mismatch warnings.
 
 ---
 

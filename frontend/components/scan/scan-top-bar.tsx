@@ -14,6 +14,7 @@ import {
   ComboboxList,
 } from '@/components/ui/combobox';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { ModeToggle } from '@/components/mode-toggle';
 import type { ScannerDevice } from '@/types/scan';
 
 interface ScanTopBarProps {
@@ -144,8 +145,9 @@ export function ScanTopBar({ bridgeStatus, devices, selectedDeviceId, onSelectDe
           )}
         </div>
 
-        {/* Right: Back to Viewer */}
-        <div>
+        {/* Right: Mode Toggle & Back to Viewer */}
+        <div className="flex items-center gap-1.5">
+          <ModeToggle />
           <Link href="/view" passHref>
             <Button
               variant="ghost"
